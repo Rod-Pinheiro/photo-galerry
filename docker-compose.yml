@@ -68,6 +68,26 @@ services:
     networks:
       - photo-gallery
 
+  db-init:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_started
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://user:password@postgres:5432/photo_gallery
+    command: >
+      sh -c "
+      echo 'Waiting for PostgreSQL to be ready...' &&
+      while ! nc -z postgres 5432; do sleep 1; done &&
+      echo 'PostgreSQL is ready. Creating tables...' &&
+      npx tsx scripts/create-tables.ts &&
+      echo 'Database initialization completed successfully!'
+      "
+    networks:
+      - photo-gallery
+    restart: "no"
+
 volumes:
   minio_data:
   postgres_data:
