@@ -5,7 +5,6 @@ import Link from "next/link"
 import { PhotoGrid } from "./photo-grid"
 import { SelectionControls } from "./selection-controls"
 import { DownloadSection } from "./download-section"
-import { UploadPhotos } from "./upload-photos"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 
@@ -93,7 +92,6 @@ export function EventGallery({ event }: { event: Event }) {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <UploadPhotos eventId={event.id} onUploadComplete={handleUploadComplete} />
 
         <SelectionControls
           selectedCount={selectedPhotos.size}
