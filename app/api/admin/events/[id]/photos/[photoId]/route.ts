@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSessionFromRequest } from '@/lib/auth'
-import { deletePhoto } from '@/lib/minio'
+import { deletePhoto, loadEventMetadata, saveEventMetadata } from '@/lib/minio'
+import { invalidateEventsCache } from '@/lib/photo-service'
 
 export async function DELETE(
   request: NextRequest,
@@ -19,6 +20,28 @@ export async function DELETE(
 
     // Delete from MinIO
     await deletePhoto(photoId)
+
+    // Update metadata to remove the deleted photo
+    try {
+      const currentEvents = await loadEventMetadata()
+      const eventIndex = currentEvents.findIndex((event: any) => event.id === eventId)
+
+      if (eventIndex !== -1) {
+        // Remove the deleted photo from the event's photos array
+        currentEvents[eventIndex].photos = currentEvents[eventIndex].photos.filter(
+          (photo: any) => photo.id !== photoId
+        )
+
+        // Save updated metadata
+        await saveEventMetadata(currentEvents)
+      }
+    } catch (metadataError) {
+      console.error('Error updating metadata:', metadataError)
+      // Don't fail the request if metadata update fails
+    }
+
+    // Invalidate cache to refresh photo counts
+    invalidateEventsCache()
 
     return NextResponse.json({ success: true })
   } catch (error) {

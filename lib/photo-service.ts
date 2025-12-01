@@ -103,7 +103,7 @@ export async function getAllEvents(): Promise<Event[]> {
         const existingEvent = manualEvents.find(event => event.id === folderName)
 
         if (existingEvent) {
-          // Use existing metadata but load photos dynamically
+          // Use existing metadata but always load photos dynamically from MinIO
           return {
             ...existingEvent,
             date: new Date(existingEvent.date),
