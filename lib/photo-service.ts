@@ -111,17 +111,30 @@ export async function getAllEvents(): Promise<Event[]> {
             visible: existingEvent.visible ?? true
           }
         } else {
-          // Create automatic event from folder
-          const photos = await getEventPhotos(folderName)
-          const thumbnail = photos.length > 0 ? photos[0].url : '/placeholder.jpg'
+          // Check if this folder has been manually configured before
+          const manualEvent = manualEvents.find((e: any) => e.id === folderName)
 
-          return {
-            id: folderName,
-            name: folderName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Capitalize words
-            date: new Date(), // Use current date for auto-detected events
-            thumbnail,
-            photos,
-            visible: true
+          if (manualEvent) {
+            // Use manual configuration
+            return {
+              ...manualEvent,
+              date: new Date(manualEvent.date),
+              photos: await getEventPhotos(folderName),
+              visible: manualEvent.visible ?? true
+            }
+          } else {
+            // Create automatic event from folder
+            const photos = await getEventPhotos(folderName)
+            const thumbnail = photos.length > 0 ? photos[0].url : '/placeholder.jpg'
+
+            return {
+              id: folderName,
+              name: folderName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Capitalize words
+              date: new Date(), // Use current date for auto-detected events
+              thumbnail,
+              photos,
+              visible: true
+            }
           }
         }
       })
