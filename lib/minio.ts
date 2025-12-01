@@ -1,30 +1,42 @@
 import { Client } from 'minio'
 
-const minioClient = new Client({
-  endPoint: process.env.MINIO_ENDPOINT || 'localhost',
-  port: 9000,
-  useSSL: false,
-  accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-  secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
-})
-
 export const BUCKET_NAME = process.env.MINIO_BUCKET || 'photos'
+
+let minioClient: Client | null = null
+
+function getMinioClient(): Client {
+  if (!minioClient) {
+    const endpoint = process.env.MINIO_ENDPOINT || 'localhost'
+    console.log('Creating MinIO client with endpoint:', endpoint, 'port:', 9000)
+    minioClient = new Client({
+      endPoint: endpoint,
+      port: 9000,
+      useSSL: false,
+      accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
+      secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+    })
+  }
+  return minioClient
+}
 
 export async function ensureBucketExists() {
   try {
-    const exists = await minioClient.bucketExists(BUCKET_NAME)
+    const client = getMinioClient()
+    const exists = await client.bucketExists(BUCKET_NAME)
     if (!exists) {
-      await minioClient.makeBucket(BUCKET_NAME)
+      await client.makeBucket(BUCKET_NAME)
       console.log(`Bucket ${BUCKET_NAME} created`)
     }
   } catch (error) {
     console.error('Error ensuring bucket exists:', error)
+    // Don't throw error during initialization
   }
 }
 
 export async function uploadPhoto(file: Buffer, filename: string, contentType: string = 'image/jpeg') {
   try {
-    await minioClient.putObject(BUCKET_NAME, filename, file, file.length, {
+    const client = getMinioClient()
+    await client.putObject(BUCKET_NAME, filename, file, file.length, {
       'Content-Type': contentType,
     })
     return `http://${process.env.MINIO_ENDPOINT || 'localhost'}:9000/${BUCKET_NAME}/${filename}`
@@ -40,7 +52,8 @@ export async function getPhotoUrl(filename: string) {
 
 export async function deletePhoto(filename: string) {
   try {
-    await minioClient.removeObject(BUCKET_NAME, filename)
+    const client = getMinioClient()
+    await client.removeObject(BUCKET_NAME, filename)
   } catch (error) {
     console.error('Error deleting photo:', error)
     throw error
@@ -49,8 +62,9 @@ export async function deletePhoto(filename: string) {
 
 export async function deleteAllPhotosWithPrefix(prefix: string) {
   try {
+    const client = getMinioClient()
     const objectsToDelete: string[] = []
-    const stream = minioClient.listObjectsV2(BUCKET_NAME, prefix, true)
+    const stream = client.listObjectsV2(BUCKET_NAME, prefix, true)
 
     return new Promise<void>((resolve, reject) => {
       stream.on('data', (obj) => {
@@ -60,7 +74,7 @@ export async function deleteAllPhotosWithPrefix(prefix: string) {
       })
       stream.on('end', async () => {
         if (objectsToDelete.length > 0) {
-          await minioClient.removeObjects(BUCKET_NAME, objectsToDelete)
+          await client.removeObjects(BUCKET_NAME, objectsToDelete)
           console.log(`Deleted ${objectsToDelete.length} objects with prefix ${prefix}`)
         }
         resolve()
@@ -75,7 +89,8 @@ export async function deleteAllPhotosWithPrefix(prefix: string) {
 
 export async function listPhotos(prefix?: string, limit?: number, marker?: string) {
   try {
-    const stream = minioClient.listObjectsV2(BUCKET_NAME, prefix, true, marker)
+    const client = getMinioClient()
+    const stream = client.listObjectsV2(BUCKET_NAME, prefix, true, marker)
     const photos: string[] = []
     let count = 0
 
@@ -101,7 +116,8 @@ export async function listPhotos(prefix?: string, limit?: number, marker?: strin
 
 export async function getPresignedUrl(filename: string, expirySeconds: number = 3600) {
   try {
-    return await minioClient.presignedGetObject(BUCKET_NAME, filename, expirySeconds)
+    const client = getMinioClient()
+    return await client.presignedGetObject(BUCKET_NAME, filename, expirySeconds)
   } catch (error) {
     console.error('Error generating presigned URL:', error)
     throw error
@@ -110,7 +126,8 @@ export async function getPresignedUrl(filename: string, expirySeconds: number = 
 
 export async function getPresignedPutUrl(filename: string, expirySeconds: number = 3600) {
   try {
-    return await minioClient.presignedPutObject(BUCKET_NAME, filename, expirySeconds)
+    const client = getMinioClient()
+    return await client.presignedPutObject(BUCKET_NAME, filename, expirySeconds)
   } catch (error) {
     console.error('Error generating presigned PUT URL:', error)
     throw error
@@ -119,7 +136,8 @@ export async function getPresignedPutUrl(filename: string, expirySeconds: number
 
 export async function listFolders(prefix?: string) {
   try {
-    const stream = minioClient.listObjectsV2(BUCKET_NAME, prefix, true)
+    const client = getMinioClient()
+    const stream = client.listObjectsV2(BUCKET_NAME, prefix, true)
     const folders: string[] = []
 
     return new Promise<string[]>((resolve, reject) => {
@@ -140,7 +158,8 @@ export async function listFolders(prefix?: string) {
 
 export async function listTopLevelFolders() {
   try {
-    const stream = minioClient.listObjectsV2(BUCKET_NAME, '', true)
+    const client = getMinioClient()
+    const stream = client.listObjectsV2(BUCKET_NAME, '', true)
     const folders: string[] = []
 
     return new Promise<string[]>((resolve, reject) => {
@@ -154,11 +173,14 @@ export async function listTopLevelFolders() {
         }
       })
       stream.on('end', () => resolve(folders))
-      stream.on('error', reject)
+      stream.on('error', (error) => {
+        console.error('Error listing top-level folders:', error)
+        resolve([]) // Return empty array instead of failing
+      })
     })
   } catch (error) {
     console.error('Error listing top-level folders:', error)
-    throw error
+    return [] // Return empty array instead of throwing
   }
 }
 
@@ -177,7 +199,8 @@ export async function saveEventMetadata(events: any[]) {
     console.log('Metadata JSON length:', metadata.length)
     const buffer = Buffer.from(metadata, 'utf8')
     console.log('Buffer length:', buffer.length)
-    await minioClient.putObject(BUCKET_NAME, EVENTS_METADATA_KEY, buffer, buffer.length, {
+    const client = getMinioClient()
+    await client.putObject(BUCKET_NAME, EVENTS_METADATA_KEY, buffer, buffer.length, {
       'Content-Type': 'application/json',
     })
     console.log('Event metadata saved to MinIO successfully')
@@ -190,7 +213,8 @@ export async function saveEventMetadata(events: any[]) {
 export async function loadEventMetadata(): Promise<any[]> {
   try {
     console.log('Loading event metadata from', EVENTS_METADATA_KEY)
-    const stream = await minioClient.getObject(BUCKET_NAME, EVENTS_METADATA_KEY)
+    const client = getMinioClient()
+    const stream = await client.getObject(BUCKET_NAME, EVENTS_METADATA_KEY)
     let data = ''
 
     return new Promise((resolve, reject) => {

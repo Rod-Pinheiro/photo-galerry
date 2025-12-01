@@ -7,12 +7,27 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - MINIO_ENDPOINT=minio:9000
+      - DATABASE_URL=postgresql://user:password@postgres:5432/photo_gallery
+      - MINIO_ENDPOINT=minio
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_BUCKET=photos
     depends_on:
+      - postgres
       - minio
+    networks:
+      - photo-gallery
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=photo_gallery
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - photo-gallery
 
@@ -55,6 +70,7 @@ services:
 
 volumes:
   minio_data:
+  postgres_data:
 
 networks:
   photo-gallery:

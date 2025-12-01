@@ -9,13 +9,16 @@
 
 ## Data Migration
 - `node scripts/migrate-data.js` - Migrate mock events to MinIO (run once after setup)
+- `node scripts/create-tables.js` - Create PostgreSQL tables (run once after setup)
 
 ## Docker Commands
-- `docker compose up --build` - Build and start all services (app + MinIO)
+- `docker compose up --build` - Build and start all services (app + PostgreSQL + MinIO)
 - `docker compose up` - Start all services
 - `docker compose down` - Stop all services
 - `docker compose logs app` - View application logs
+- `docker compose logs postgres` - View PostgreSQL logs
 - `docker compose logs minio` - View MinIO logs
+- PostgreSQL: localhost:5432 (user/password/photo_gallery)
 - MinIO Console: http://localhost:9001 (admin/minioadmin)
 - MinIO API: http://localhost:9000
 

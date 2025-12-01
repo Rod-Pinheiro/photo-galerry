@@ -1,6 +1,6 @@
 import { ensureBucketExists, uploadPhoto, listPhotos, getPhotoUrl, listTopLevelFolders } from './minio'
 import { Client as MinIOClient } from 'minio'
-import { prisma } from './prisma'
+import { db } from './db'
 
 export interface Photo {
   id: string
@@ -16,8 +16,8 @@ export interface Event {
   visible: boolean
 }
 
-// Initialize MinIO bucket on startup
-if (typeof window === 'undefined') {
+// Initialize MinIO bucket on startup (only in runtime, not during build)
+if (typeof window === 'undefined' && process.env.NODE_ENV !== 'production') {
   ensureBucketExists().catch(console.error)
 }
 
@@ -86,54 +86,71 @@ export async function getAllEvents(): Promise<Event[]> {
 
   try {
     // Get all events from database
-    const dbEvents = await prisma.event.findMany({
-      include: {
-        photos: {
-          orderBy: {
-            createdAt: 'asc'
-          }
-        }
-      },
-      orderBy: {
-        date: 'desc'
+    const eventsQuery = await db.query(`
+      SELECT id, name, date, thumbnail, visible, created_at, updated_at
+      FROM events
+      ORDER BY date DESC
+    `)
+
+    // Get all photos
+    const photosQuery = await db.query(`
+      SELECT id, url, event_id, created_at
+      FROM photos
+      ORDER BY created_at ASC
+    `)
+
+    // Group photos by event_id
+    const photosByEvent: Record<string, any[]> = {}
+    photosQuery.rows.forEach(photo => {
+      if (!photosByEvent[photo.event_id]) {
+        photosByEvent[photo.event_id] = []
       }
+      photosByEvent[photo.event_id].push({
+        id: photo.id,
+        url: photo.url
+      })
     })
 
     // Convert to our Event interface format
-    const events: Event[] = dbEvents.map(dbEvent => ({
+    const events: Event[] = eventsQuery.rows.map(dbEvent => ({
       id: dbEvent.id,
       name: dbEvent.name,
       date: dbEvent.date,
       thumbnail: dbEvent.thumbnail || '/placeholder.jpg',
-      photos: dbEvent.photos.map(photo => ({
-        id: photo.id,
-        url: photo.url
-      })),
+      photos: photosByEvent[dbEvent.id] || [],
       visible: dbEvent.visible
     }))
 
-    // Get all top-level folders from MinIO for events that might not be in DB yet
-    const folders = await listTopLevelFolders()
-    console.log('Found folders in MinIO:', folders)
+    // Only try to get MinIO folders if not in build time
+    let folderEvents: Event[] = []
+    if (process.env.NODE_ENV !== 'production' || process.env.NEXT_PHASE !== 'phase-production-build') {
+      try {
+        // Get all top-level folders from MinIO for events that might not be in DB yet
+        const folders = await listTopLevelFolders()
+        console.log('Found folders in MinIO:', folders)
 
-    // Create events from folders that don't exist in DB
-    const folderEvents: Event[] = await Promise.all(
-      folders
-        .filter(folderName => !dbEvents.some(event => event.id === folderName))
-        .map(async (folderName) => {
-          const photos = await getEventPhotos(folderName)
-          const thumbnail = photos.length > 0 ? photos[0].url : '/placeholder.jpg'
+        // Create events from folders that don't exist in DB
+        folderEvents = await Promise.all(
+          folders
+            .filter(folderName => !eventsQuery.rows.some((event: any) => event.id === folderName))
+            .map(async (folderName) => {
+              const photos = await getEventPhotos(folderName)
+              const thumbnail = photos.length > 0 ? photos[0].url : '/placeholder.jpg'
 
-          return {
-            id: folderName,
-            name: folderName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Capitalize words
-            date: new Date(), // Use current date for auto-detected events
-            thumbnail,
-            photos,
-            visible: true
-          }
-        })
-    )
+              return {
+                id: folderName,
+                name: folderName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Capitalize words
+                date: new Date(), // Use current date for auto-detected events
+                thumbnail,
+                photos,
+                visible: true
+              }
+            })
+        )
+      } catch (minioError) {
+        console.log('MinIO not available, skipping folder detection')
+      }
+    }
 
     const allEvents = [...events, ...folderEvents]
 
@@ -170,15 +187,13 @@ export async function createEvent(name: string, date: Date, thumbnail?: File): P
   }
 
   // Create event in database
-  const newEvent = await prisma.event.create({
-    data: {
-      id: eventId,
-      name,
-      date,
-      thumbnail: thumbnailUrl,
-      visible: true,
-    }
-  })
+  const result = await db.query(`
+    INSERT INTO events (id, name, date, thumbnail, visible)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING id, name, date, thumbnail, visible
+  `, [eventId, name, date, thumbnailUrl, true])
+
+  const newEvent = result.rows[0]
 
   // Clear cache
   eventsCache = null
@@ -201,14 +216,13 @@ export async function uploadEventPhoto(eventId: string, file: File): Promise<Pho
   const url = await uploadPhoto(Buffer.from(buffer), filename, file.type)
 
   // Save photo to database
-  const photo = await prisma.photo.create({
-    data: {
-      id: filename,
-      filename,
-      url,
-      eventId,
-    }
-  })
+  const result = await db.query(`
+    INSERT INTO photos (id, filename, url, event_id)
+    VALUES ($1, $2, $3, $4)
+    RETURNING id, url
+  `, [filename, filename, url, eventId])
+
+  const photo = result.rows[0]
 
   // Invalidate cache
   eventsCache = null
@@ -222,17 +236,15 @@ export async function uploadEventPhoto(eventId: string, file: File): Promise<Pho
 export async function getEventPhotos(eventId: string, limit?: number): Promise<Photo[]> {
   try {
     // Get photos from database
-    const photos = await prisma.photo.findMany({
-      where: {
-        eventId: eventId
-      },
-      orderBy: {
-        createdAt: 'asc'
-      },
-      take: limit
-    })
+    const query = limit
+      ? `SELECT id, url FROM photos WHERE event_id = $1 ORDER BY created_at ASC LIMIT $2`
+      : `SELECT id, url FROM photos WHERE event_id = $1 ORDER BY created_at ASC`
 
-    return photos.map(photo => ({
+    const result = limit
+      ? await db.query(query, [eventId, limit])
+      : await db.query(query, [eventId])
+
+    return result.rows.map((photo: any) => ({
       id: photo.id,
       url: photo.url
     }))
@@ -245,11 +257,7 @@ export async function getEventPhotos(eventId: string, limit?: number): Promise<P
 export async function deleteEventPhoto(eventId: string, photoId: string): Promise<void> {
   try {
     // Delete from database
-    await prisma.photo.delete({
-      where: {
-        id: photoId
-      }
-    })
+    await db.query(`DELETE FROM photos WHERE id = $1`, [photoId])
 
     // Delete from MinIO
     const { deletePhoto } = await import('./minio')
@@ -275,11 +283,7 @@ export async function deleteEvent(eventId: string): Promise<void> {
     // Try to delete from database first
     try {
       console.log('deleteEvent: Attempting to delete from database')
-      await prisma.event.delete({
-        where: {
-          id: eventId
-        }
-      })
+      await db.query(`DELETE FROM events WHERE id = $1`, [eventId])
       console.log('deleteEvent: Deleted from database')
     } catch (dbError: any) {
       console.log('deleteEvent: Event not in database, checking metadata')

@@ -24,10 +24,17 @@ COPY . .
 # Learn more here: https://nextjs.org/telemetry
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_PHASE phase-production-build
+# Set dummy DATABASE_URL for build time (will fallback to mock data)
+ENV DATABASE_URL=postgresql://dummy:dummy@dummy:5432/dummy
 
 RUN \
-  if [ -f package-lock.json ]; then npm run build; \
-  else echo "Lockfile not found." && exit 1; \
+  if [ -f package-lock.json ]; then \
+    echo "Starting build..." && \
+    npm run build && \
+    echo "Build completed successfully"; \
+  else \
+    echo "Lockfile not found." && exit 1; \
   fi
 
 # Production image, copy all the files and run next
@@ -47,19 +54,19 @@ COPY --from=builder /app/public ./public
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Copy the built application
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+COPY --from=builder --chown=nextjs:nodejs /app/lib ./lib
 
 USER nextjs
 
 EXPOSE 3000
 
 ENV PORT 3000
-# set hostname to localhost
 ENV HOSTNAME "0.0.0.0"
 
-# server.js is created by next build from the standalone output
-# https://nextjs.org/docs/pages/api-reference/next-config-js/output
-CMD ["node", "server.js"]
+# Start the application
+CMD ["npm", "start"]

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAllEvents, deleteEvent, invalidateEventsCache } from '@/lib/photo-service'
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/db'
 import { getSessionFromRequest } from '@/lib/auth'
 
 // GET /api/admin/events/[id] - Get single event
@@ -59,22 +59,43 @@ export async function PUT(
     console.log('Update data:', { name, date, visible })
 
     // Update event in database
-    const updateData: any = {}
-    if (name !== undefined) updateData.name = name
-    if (date !== undefined) updateData.date = new Date(date)
-    if (visible !== undefined) updateData.visible = visible
+    const updateFields: string[] = []
+    const values: any[] = []
+    let paramIndex = 1
 
-    const updatedEvent = await prisma.event.update({
-      where: { id: eventId },
-      data: updateData,
-      include: {
-        photos: {
-          orderBy: {
-            createdAt: 'asc'
-          }
-        }
-      }
-    })
+    if (name !== undefined) {
+      updateFields.push(`name = $${paramIndex++}`)
+      values.push(name)
+    }
+    if (date !== undefined) {
+      updateFields.push(`date = $${paramIndex++}`)
+      values.push(new Date(date))
+    }
+    if (visible !== undefined) {
+      updateFields.push(`visible = $${paramIndex++}`)
+      values.push(visible)
+    }
+
+    if (updateFields.length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+    }
+
+    values.push(eventId) // for WHERE id = $paramIndex
+
+    const updateQuery = `
+      UPDATE events
+      SET ${updateFields.join(', ')}, updated_at = NOW()
+      WHERE id = $${paramIndex}
+      RETURNING id, name, date, thumbnail, visible
+    `
+
+    const result = await db.query(updateQuery, values)
+    const updatedEvent = result.rows[0]
+
+    // Get photos for the event
+    const photosResult = await db.query(`
+      SELECT id, url FROM photos WHERE event_id = $1 ORDER BY created_at ASC
+    `, [eventId])
 
     // Clear cache
     invalidateEventsCache()
@@ -84,7 +105,7 @@ export async function PUT(
       name: updatedEvent.name,
       date: updatedEvent.date,
       thumbnail: updatedEvent.thumbnail || '/placeholder.jpg',
-      photos: updatedEvent.photos.map(photo => ({
+      photos: photosResult.rows.map((photo: any) => ({
         id: photo.id,
         url: photo.url
       })),
