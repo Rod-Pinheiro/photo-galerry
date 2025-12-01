@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAllEvents, invalidateEventsCache } from '@/lib/photo-service'
-import { saveEventMetadata, loadEventMetadata, deletePhoto } from '@/lib/minio'
+import { getAllEvents, deleteEvent, invalidateEventsCache } from '@/lib/photo-service'
+import { prisma } from '@/lib/prisma'
 import { getSessionFromRequest } from '@/lib/auth'
 
 // GET /api/admin/events/[id] - Get single event
@@ -58,34 +58,38 @@ export async function PUT(
     const { name, date, visible } = body
     console.log('Update data:', { name, date, visible })
 
-    // Load current events
-    const currentEvents = await getAllEvents()
-    console.log('Current events count:', currentEvents.length)
-    console.log('Event IDs:', currentEvents.map((e: any) => e.id))
-    const eventIndex = currentEvents.findIndex((e: any) => e.id === eventId)
-    console.log('Event index found:', eventIndex)
+    // Update event in database
+    const updateData: any = {}
+    if (name !== undefined) updateData.name = name
+    if (date !== undefined) updateData.date = new Date(date)
+    if (visible !== undefined) updateData.visible = visible
 
-    if (eventIndex === -1) {
-      return NextResponse.json({ error: 'Event not found' }, { status: 404 })
-    }
-
-    // Update event
-    const updatedEvent = {
-      ...currentEvents[eventIndex],
-      ...(name !== undefined && { name }),
-      ...(date !== undefined && { date: new Date(date) }),
-      ...(visible !== undefined && { visible })
-    }
-
-    currentEvents[eventIndex] = updatedEvent
-
-    // Save updated events
-    await saveEventMetadata(currentEvents)
+    const updatedEvent = await prisma.event.update({
+      where: { id: eventId },
+      data: updateData,
+      include: {
+        photos: {
+          orderBy: {
+            createdAt: 'asc'
+          }
+        }
+      }
+    })
 
     // Clear cache
     invalidateEventsCache()
 
-    return NextResponse.json(updatedEvent)
+    return NextResponse.json({
+      id: updatedEvent.id,
+      name: updatedEvent.name,
+      date: updatedEvent.date,
+      thumbnail: updatedEvent.thumbnail || '/placeholder.jpg',
+      photos: updatedEvent.photos.map(photo => ({
+        id: photo.id,
+        url: photo.url
+      })),
+      visible: updatedEvent.visible
+    })
   } catch (error) {
     console.error('Error updating event:', error)
     return NextResponse.json({ error: 'Failed to update event' }, { status: 500 })
@@ -107,19 +111,16 @@ export async function DELETE(
     const resolvedParams = await params
     const eventId = resolvedParams.id
 
-    // Load current events
-    const currentEvents = await loadEventMetadata()
-    const filteredEvents = currentEvents.filter((e: any) => e.id !== eventId)
+    // Check if event exists
+    const events = await getAllEvents()
+    const eventExists = events.some((e: any) => e.id === eventId)
 
-    if (filteredEvents.length === currentEvents.length) {
+    if (!eventExists) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
-    // Save updated events (without the deleted event)
-    await saveEventMetadata(filteredEvents)
-
-    // Clear cache
-    invalidateEventsCache()
+    // Delete the event and all its photos
+    await deleteEvent(eventId)
 
     return NextResponse.json({ success: true })
   } catch (error) {

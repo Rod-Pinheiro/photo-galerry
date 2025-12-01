@@ -47,6 +47,32 @@ export async function deletePhoto(filename: string) {
   }
 }
 
+export async function deleteAllPhotosWithPrefix(prefix: string) {
+  try {
+    const objectsToDelete: string[] = []
+    const stream = minioClient.listObjectsV2(BUCKET_NAME, prefix, true)
+
+    return new Promise<void>((resolve, reject) => {
+      stream.on('data', (obj) => {
+        if (obj.name) {
+          objectsToDelete.push(obj.name)
+        }
+      })
+      stream.on('end', async () => {
+        if (objectsToDelete.length > 0) {
+          await minioClient.removeObjects(BUCKET_NAME, objectsToDelete)
+          console.log(`Deleted ${objectsToDelete.length} objects with prefix ${prefix}`)
+        }
+        resolve()
+      })
+      stream.on('error', reject)
+    })
+  } catch (error) {
+    console.error('Error deleting photos with prefix:', error)
+    throw error
+  }
+}
+
 export async function listPhotos(prefix?: string, limit?: number, marker?: string) {
   try {
     const stream = minioClient.listObjectsV2(BUCKET_NAME, prefix, true, marker)

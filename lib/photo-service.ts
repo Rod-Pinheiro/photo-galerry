@@ -263,6 +263,48 @@ export async function deleteEventPhoto(eventId: string, photoId: string): Promis
   }
 }
 
+export async function deleteEvent(eventId: string): Promise<void> {
+  try {
+    console.log('deleteEvent: Starting deletion for eventId:', eventId)
+
+    // Delete all photos from MinIO
+    const { deleteAllPhotosWithPrefix } = await import('./minio')
+    console.log('deleteEvent: Deleting photos from MinIO with prefix:', `${eventId}/`)
+    await deleteAllPhotosWithPrefix(`${eventId}/`)
+
+    // Try to delete from database first
+    try {
+      console.log('deleteEvent: Attempting to delete from database')
+      await prisma.event.delete({
+        where: {
+          id: eventId
+        }
+      })
+      console.log('deleteEvent: Deleted from database')
+    } catch (dbError: any) {
+      console.log('deleteEvent: Event not in database, checking metadata')
+      // If not in database, delete from metadata
+      const { loadEventMetadata, saveEventMetadata } = await import('./minio')
+      const currentEvents = await loadEventMetadata()
+      const filteredEvents = currentEvents.filter((e: any) => e.id !== eventId)
+
+      if (filteredEvents.length < currentEvents.length) {
+        await saveEventMetadata(filteredEvents)
+        console.log('deleteEvent: Deleted from metadata')
+      } else {
+        console.log('deleteEvent: Event not found in metadata either')
+      }
+    }
+
+    // Clear cache
+    eventsCache = null
+    console.log('deleteEvent: Deletion completed successfully')
+  } catch (error) {
+    console.error('Error deleting event:', eventId, error)
+    throw error
+  }
+}
+
 export async function invalidateEventsCache() {
   eventsCache = null
   cacheTimestamp = 0
