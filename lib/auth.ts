@@ -48,14 +48,14 @@ export async function getSessionFromRequest(request: NextRequest): Promise<Admin
   return await verifySession(token)
 }
 
-export function createAuthResponse(session: AdminSession): NextResponse {
+export async function createAuthResponse(token: string): Promise<NextResponse> {
   const response = NextResponse.json({ success: true })
 
-  // Set HTTP-only cookie
-  response.cookies.set('admin-session', session.username, {
+  // Set HTTP-only cookie with the JWT token
+  response.cookies.set('admin-session', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: 'lax', // Allow cross-site access for different IPs
     maxAge: 24 * 60 * 60 // 24 hours
   })
 

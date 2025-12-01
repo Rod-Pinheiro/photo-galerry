@@ -21,15 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = await createSession(username)
-    const response = NextResponse.json({ success: true })
-
-    // Set HTTP-only cookie
-    response.cookies.set('admin-session', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 // 24 hours
-    })
+    const response = await createAuthResponse(token)
 
     return response
   } catch (error) {
