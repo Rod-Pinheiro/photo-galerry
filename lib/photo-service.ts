@@ -1,4 +1,5 @@
 import { ensureBucketExists, uploadPhoto, listPhotos, loadEventMetadata, saveEventMetadata, getPhotoUrl, listTopLevelFolders } from './minio'
+import { Client as MinIOClient } from 'minio'
 
 export interface Photo {
   id: string
@@ -178,6 +179,8 @@ export async function createEvent(name: string, date: Date, thumbnail?: File): P
     visible: true,
   }
 
+  // TODO: Create folder in MinIO
+
   // Load current events and add new one
   const currentEvents = await loadEventMetadata()
   const updatedEvents = [...currentEvents, newEvent]
@@ -190,8 +193,7 @@ export async function createEvent(name: string, date: Date, thumbnail?: File): P
 
   return {
     ...newEvent,
-    photos: [],
-    visible: true
+    photos: []
   }
 }
 

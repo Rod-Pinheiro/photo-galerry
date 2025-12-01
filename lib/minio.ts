@@ -141,11 +141,20 @@ export const EVENTS_METADATA_KEY = 'events/metadata.json'
 
 export async function saveEventMetadata(events: any[]) {
   try {
-    const metadata = JSON.stringify(events, null, 2)
-    await minioClient.putObject(BUCKET_NAME, EVENTS_METADATA_KEY, metadata, metadata.length, {
+    console.log('Saving event metadata for', events.length, 'events')
+    // Convert Date objects to ISO strings for JSON serialization
+    const serializableEvents = events.map(event => ({
+      ...event,
+      date: event.date instanceof Date ? event.date.toISOString() : event.date
+    }))
+    const metadata = JSON.stringify(serializableEvents, null, 2)
+    console.log('Metadata JSON length:', metadata.length)
+    const buffer = Buffer.from(metadata, 'utf8')
+    console.log('Buffer length:', buffer.length)
+    await minioClient.putObject(BUCKET_NAME, EVENTS_METADATA_KEY, buffer, buffer.length, {
       'Content-Type': 'application/json',
     })
-    console.log('Event metadata saved to MinIO')
+    console.log('Event metadata saved to MinIO successfully')
   } catch (error) {
     console.error('Error saving event metadata:', error)
     throw error
@@ -154,6 +163,7 @@ export async function saveEventMetadata(events: any[]) {
 
 export async function loadEventMetadata(): Promise<any[]> {
   try {
+    console.log('Loading event metadata from', EVENTS_METADATA_KEY)
     const stream = await minioClient.getObject(BUCKET_NAME, EVENTS_METADATA_KEY)
     let data = ''
 
@@ -163,7 +173,15 @@ export async function loadEventMetadata(): Promise<any[]> {
       })
       stream.on('end', () => {
         try {
-          resolve(JSON.parse(data))
+          const parsed = JSON.parse(data)
+          console.log('Parsed metadata:', typeof parsed, Array.isArray(parsed) ? 'array' : 'object')
+          if (Array.isArray(parsed)) {
+            console.log('Loaded', parsed.length, 'events from metadata')
+            resolve(parsed)
+          } else {
+            console.log('Metadata is not an array, using empty array')
+            resolve([])
+          }
         } catch (parseError) {
           console.error('Error parsing event metadata:', parseError)
           resolve([])
