@@ -1,5 +1,6 @@
-import { ensureBucketExists, uploadPhoto, listPhotos, loadEventMetadata, saveEventMetadata, getPhotoUrl, listTopLevelFolders } from './minio'
+import { ensureBucketExists, uploadPhoto, listPhotos, getPhotoUrl, listTopLevelFolders } from './minio'
 import { Client as MinIOClient } from 'minio'
+import { prisma } from './prisma'
 
 export interface Photo {
   id: string
@@ -84,73 +85,57 @@ export async function getAllEvents(): Promise<Event[]> {
   }
 
   try {
-    // First, try to load manual events from metadata
-    let manualEvents: any[] = []
-    try {
-      manualEvents = await loadEventMetadata()
-    } catch (error) {
-      console.log('No metadata file found, will create from folders')
-    }
+    // Get all events from database
+    const dbEvents = await prisma.event.findMany({
+      include: {
+        photos: {
+          orderBy: {
+            createdAt: 'asc'
+          }
+        }
+      },
+      orderBy: {
+        date: 'desc'
+      }
+    })
 
-    // Get all top-level folders from MinIO
+    // Convert to our Event interface format
+    const events: Event[] = dbEvents.map(dbEvent => ({
+      id: dbEvent.id,
+      name: dbEvent.name,
+      date: dbEvent.date,
+      thumbnail: dbEvent.thumbnail || '/placeholder.jpg',
+      photos: dbEvent.photos.map(photo => ({
+        id: photo.id,
+        url: photo.url
+      })),
+      visible: dbEvent.visible
+    }))
+
+    // Get all top-level folders from MinIO for events that might not be in DB yet
     const folders = await listTopLevelFolders()
     console.log('Found folders in MinIO:', folders)
 
-    // Create events from folders
+    // Create events from folders that don't exist in DB
     const folderEvents: Event[] = await Promise.all(
-      folders.map(async (folderName) => {
-        // Check if this folder already has a manual event
-        const existingEvent = manualEvents.find(event => event.id === folderName)
+      folders
+        .filter(folderName => !dbEvents.some(event => event.id === folderName))
+        .map(async (folderName) => {
+          const photos = await getEventPhotos(folderName)
+          const thumbnail = photos.length > 0 ? photos[0].url : '/placeholder.jpg'
 
-        if (existingEvent) {
-          // Use existing metadata but always load photos dynamically from MinIO
           return {
-            ...existingEvent,
-            date: new Date(existingEvent.date),
-            photos: await getEventPhotos(folderName),
-            visible: existingEvent.visible ?? true
+            id: folderName,
+            name: folderName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Capitalize words
+            date: new Date(), // Use current date for auto-detected events
+            thumbnail,
+            photos,
+            visible: true
           }
-        } else {
-          // Check if this folder has been manually configured before
-          const manualEvent = manualEvents.find((e: any) => e.id === folderName)
-
-          if (manualEvent) {
-            // Use manual configuration
-            return {
-              ...manualEvent,
-              date: new Date(manualEvent.date),
-              photos: await getEventPhotos(folderName),
-              visible: manualEvent.visible ?? true
-            }
-          } else {
-            // Create automatic event from folder
-            const photos = await getEventPhotos(folderName)
-            const thumbnail = photos.length > 0 ? photos[0].url : '/placeholder.jpg'
-
-            return {
-              id: folderName,
-              name: folderName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Capitalize words
-              date: new Date(), // Use current date for auto-detected events
-              thumbnail,
-              photos,
-              visible: true
-            }
-          }
-        }
-      })
+        })
     )
 
-    // Combine manual events that don't have folders with folder events
-    const manualOnlyEvents = manualEvents
-      .filter(event => !folders.includes(event.id))
-      .map(event => ({
-        ...event,
-        date: new Date(event.date),
-        photos: [], // Manual events without folders won't have photos
-        visible: event.visible ?? true
-      }))
-
-    const allEvents = [...folderEvents, ...manualOnlyEvents]
+    const allEvents = [...events, ...folderEvents]
 
     // Sort by date (newest first)
     eventsCache = allEvents.sort((a, b) => b.date.getTime() - a.date.getTime())
@@ -158,7 +143,7 @@ export async function getAllEvents(): Promise<Event[]> {
     return eventsCache
 
   } catch (error) {
-    console.error('Error loading events from MinIO:', error)
+    console.error('Error loading events from database:', error)
   }
 
   // Fallback to mock data
@@ -184,29 +169,27 @@ export async function createEvent(name: string, date: Date, thumbnail?: File): P
     thumbnailUrl = await uploadPhoto(Buffer.from(buffer), thumbnailFilename, thumbnail.type)
   }
 
-  const newEvent = {
-    id: eventId,
-    name,
-    date,
-    thumbnail: thumbnailUrl,
-    visible: true,
-  }
-
-  // TODO: Create folder in MinIO
-
-  // Load current events and add new one
-  const currentEvents = await loadEventMetadata()
-  const updatedEvents = [...currentEvents, newEvent]
-
-  // Save to MinIO
-  await saveEventMetadata(updatedEvents)
+  // Create event in database
+  const newEvent = await prisma.event.create({
+    data: {
+      id: eventId,
+      name,
+      date,
+      thumbnail: thumbnailUrl,
+      visible: true,
+    }
+  })
 
   // Clear cache
   eventsCache = null
 
   return {
-    ...newEvent,
-    photos: []
+    id: newEvent.id,
+    name: newEvent.name,
+    date: newEvent.date,
+    thumbnail: newEvent.thumbnail || '/placeholder.jpg',
+    photos: [],
+    visible: newEvent.visible
   }
 }
 
@@ -217,28 +200,66 @@ export async function uploadEventPhoto(eventId: string, file: File): Promise<Pho
 
   const url = await uploadPhoto(Buffer.from(buffer), filename, file.type)
 
+  // Save photo to database
+  const photo = await prisma.photo.create({
+    data: {
+      id: filename,
+      filename,
+      url,
+      eventId,
+    }
+  })
+
+  // Invalidate cache
+  eventsCache = null
+
   return {
-    id: filename,
-    url: url,
+    id: photo.id,
+    url: photo.url,
   }
 }
 
 export async function getEventPhotos(eventId: string, limit?: number): Promise<Photo[]> {
   try {
-    const { photos: photoKeys } = await listPhotos(`${eventId}/`, limit)
+    // Get photos from database
+    const photos = await prisma.photo.findMany({
+      where: {
+        eventId: eventId
+      },
+      orderBy: {
+        createdAt: 'asc'
+      },
+      take: limit
+    })
 
-    // Convert keys to Photo objects
-    const photos: Photo[] = photoKeys
-      .filter(key => !key.includes('thumbnail')) // Exclude thumbnails from photo list
-      .map(key => ({
-        id: key,
-        url: `http://${process.env.MINIO_ENDPOINT || 'localhost'}:9000/photos/${key}`
-      }))
-
-    return photos
+    return photos.map(photo => ({
+      id: photo.id,
+      url: photo.url
+    }))
   } catch (error) {
     console.error('Error loading photos for event:', eventId, error)
     return []
+  }
+}
+
+export async function deleteEventPhoto(eventId: string, photoId: string): Promise<void> {
+  try {
+    // Delete from database
+    await prisma.photo.delete({
+      where: {
+        id: photoId
+      }
+    })
+
+    // Delete from MinIO
+    const { deletePhoto } = await import('./minio')
+    await deletePhoto(photoId)
+
+    // Invalidate cache
+    eventsCache = null
+  } catch (error) {
+    console.error('Error deleting photo:', photoId, error)
+    throw error
   }
 }
 

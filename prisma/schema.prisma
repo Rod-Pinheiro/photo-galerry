@@ -1,0 +1,37 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id        String   @id @unique
+  name      String
+  date      DateTime
+  thumbnail String?
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  photos Photo[]
+
+  @@map("events")
+}
+
+model Photo {
+  id        String   @id @unique
+  filename  String   // Nome do arquivo no MinIO
+  url       String   // URL completa para acessar a foto
+  eventId   String
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("photos")
+}
