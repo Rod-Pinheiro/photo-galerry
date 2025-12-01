@@ -5,22 +5,10 @@ import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Upload, Loader2, X, Trash2, Image as ImageIcon } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ArrowLeft, Upload, Loader2, X, Trash2, Image as ImageIcon, Check, RotateCcw } from "lucide-react"
 import Link from "next/link"
-
-interface Photo {
-  id: string
-  url: string
-}
-
-interface Event {
-  id: string
-  name: string
-  date: string
-  thumbnail: string
-  photos: Photo[]
-  visible: boolean
-}
+import { type Event } from "@/lib/photo-service"
 
 export default function EventPhotosPage() {
   const router = useRouter()
@@ -33,6 +21,8 @@ export default function EventPhotosPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [dragActive, setDragActive] = useState(false)
   const [deletingPhoto, setDeletingPhoto] = useState<string | null>(null)
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -136,6 +126,11 @@ export default function EventPhotosPage() {
 
       if (response.ok) {
         await fetchEvent() // Refresh event data
+        setSelectedPhotos(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(photoId)
+          return newSet
+        })
       } else {
         alert('Erro ao excluir foto')
       }
@@ -147,10 +142,84 @@ export default function EventPhotosPage() {
     }
   }
 
+  const togglePhotoSelection = (photoId: string) => {
+    setSelectedPhotos(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(photoId)) {
+        newSet.delete(photoId)
+      } else {
+        newSet.add(photoId)
+      }
+      return newSet
+    })
+  }
+
+  const selectAllPhotos = () => {
+    if (event) {
+      setSelectedPhotos(new Set(event.photos.map(p => p.id)))
+    }
+  }
+
+  const clearPhotoSelection = () => {
+    setSelectedPhotos(new Set())
+  }
+
+  const bulkDeletePhotos = async () => {
+    if (selectedPhotos.size === 0) return
+
+    const count = selectedPhotos.size
+    if (!confirm(`Tem certeza que deseja excluir ${count} foto${count !== 1 ? 's' : ''} selecionada${count !== 1 ? 's' : ''}?`)) {
+      return
+    }
+
+    try {
+      setBulkDeleting(true)
+      const deletePromises = Array.from(selectedPhotos).map(photoId =>
+        fetch(`/api/admin/events/${eventId}/photos/${photoId}`, {
+          method: 'DELETE',
+        })
+      )
+
+      const results = await Promise.all(deletePromises)
+      const successCount = results.filter(r => r.ok).length
+
+      if (successCount === count) {
+        await fetchEvent() // Refresh event data
+        setSelectedPhotos(new Set())
+        alert(`${successCount} foto${successCount !== 1 ? 's' : ''} excluída${successCount !== 1 ? 's' : ''} com sucesso`)
+      } else {
+        alert(`Erro: ${count - successCount} foto${count - successCount !== 1 ? 's' : ''} não puderam ser excluída${count - successCount !== 1 ? 's' : ''}`)
+        await fetchEvent() // Refresh anyway
+      }
+    } catch (err) {
+      console.error('Error bulk deleting photos:', err)
+      alert('Erro ao excluir fotos')
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="space-y-8">
+        <div className="flex items-center space-x-4">
+          <Button variant="outline" size="icon" asChild>
+            <Link href={`/admin/events/${eventId}`}>
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+              Carregando fotos...
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-2">
+              Evento: {eventId}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
       </div>
     )
   }
@@ -240,36 +309,77 @@ export default function EventPhotosPage() {
           {/* Selected Files Preview */}
           {selectedFiles.length > 0 && (
             <div className="mt-6">
-              <h4 className="font-medium mb-4">
-                Arquivos selecionados ({selectedFiles.length})
-              </h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {selectedFiles.map((file, index) => (
-                  <div key={index} className="relative group">
-                    <div className="aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden">
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={file.name}
-                        className="w-full h-full object-cover"
-                      />
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-medium">
+                  Arquivos selecionados ({selectedFiles.length})
+                </h4>
+                <div className="text-sm text-slate-500">
+                  Total: {(selectedFiles.reduce((sum, file) => sum + file.size, 0) / 1024 / 1024).toFixed(1)} MB
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {selectedFiles.map((file, index) => {
+                  const isValid = file.size <= 10 * 1024 * 1024
+                  const isValidType = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)
+
+                  return (
+                    <div key={index} className="relative group border rounded-lg p-3 bg-slate-50 dark:bg-slate-800">
+                      <div className="flex items-start gap-3">
+                        <div className="w-16 h-16 bg-slate-200 dark:bg-slate-700 rounded overflow-hidden flex-shrink-0">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={file.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-900 dark:text-white truncate" title={file.name}>
+                            {file.name}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant={isValidType ? "default" : "destructive"} className="text-xs">
+                              {file.type.split('/')[1].toUpperCase()}
+                            </Badge>
+                            <span className="text-xs text-slate-500">
+                              {(file.size / 1024 / 1024).toFixed(1)} MB
+                            </span>
+                          </div>
+                          {!isValid && (
+                            <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                              Arquivo muito grande (máx. 10MB)
+                            </p>
+                          )}
+                          {!isValidType && (
+                            <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                              Tipo não suportado
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index)}
+                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => removeFile(index)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                    <p className="text-xs text-center mt-1 truncate" title={file.name}>
-                      {file.name}
-                    </p>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
 
-              <div className="flex justify-end mt-4">
-                <Button onClick={uploadFiles} disabled={uploading}>
+              <div className="flex justify-between items-center mt-4">
+                <Button variant="outline" onClick={() => setSelectedFiles([])}>
+                  Limpar Todos
+                </Button>
+                <Button
+                  onClick={uploadFiles}
+                  disabled={uploading || selectedFiles.some(file =>
+                    file.size > 10 * 1024 * 1024 ||
+                    !['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)
+                  )}
+                >
                   {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <Upload className="mr-2 h-4 w-4" />
                   Fazer Upload ({selectedFiles.length} arquivo{selectedFiles.length !== 1 ? 's' : ''})
@@ -279,6 +389,58 @@ export default function EventPhotosPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Selection Controls */}
+      {event.photos.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                {selectedPhotos.size} de {event.photos.length} foto{event.photos.length !== 1 ? "s" : ""} selecionada{selectedPhotos.size !== 1 ? "s" : ""}
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={selectAllPhotos}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  disabled={selectedPhotos.size === event.photos.length}
+                >
+                  <Check className="w-4 h-4" />
+                  Selecionar Todas
+                </Button>
+
+                <Button
+                  onClick={clearPhotoSelection}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  disabled={selectedPhotos.size === 0}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Limpar Seleção
+                </Button>
+
+                <Button
+                  onClick={bulkDeletePhotos}
+                  variant="destructive"
+                  size="sm"
+                  className="gap-2"
+                  disabled={selectedPhotos.size === 0 || bulkDeleting}
+                >
+                  {bulkDeleting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                  Excluir Selecionadas ({selectedPhotos.size})
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Photos Grid */}
       <Card>
@@ -310,6 +472,17 @@ export default function EventPhotosPage() {
                       }}
                     />
                   </div>
+
+                  {/* Selection Checkbox */}
+                  <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Checkbox
+                      checked={selectedPhotos.has(photo.id)}
+                      onCheckedChange={() => togglePhotoSelection(photo.id)}
+                      className="bg-white/80 dark:bg-slate-700/80 border-slate-300 dark:border-slate-600"
+                    />
+                  </div>
+
+                  {/* Delete Button */}
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center">
                     <Button
                       variant="destructive"
@@ -325,6 +498,11 @@ export default function EventPhotosPage() {
                       )}
                     </Button>
                   </div>
+
+                  {/* Selection Indicator */}
+                  {selectedPhotos.has(photo.id) && (
+                    <div className="absolute inset-0 ring-2 ring-blue-600 rounded-lg pointer-events-none" />
+                  )}
                 </div>
               ))}
             </div>

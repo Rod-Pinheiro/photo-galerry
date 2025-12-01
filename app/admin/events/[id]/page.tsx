@@ -261,7 +261,9 @@ export default function EditEventPage() {
                     </Link>
                   </Button>
                   <Button variant="outline" size="sm">
-                    Gerenciar Fotos
+                    <Link href={`/admin/events/${event.id}/photos`}>
+                      Gerenciar Fotos
+                    </Link>
                   </Button>
                 </div>
               </div>
