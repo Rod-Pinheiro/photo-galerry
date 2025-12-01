@@ -39,7 +39,9 @@ export async function uploadPhoto(file: Buffer, filename: string, contentType: s
     await client.putObject(BUCKET_NAME, filename, file, file.length, {
       'Content-Type': contentType,
     })
-    return `http://${process.env.MINIO_ENDPOINT || 'localhost'}:9000/${BUCKET_NAME}/${filename}`
+    // Use external endpoint for browser access, fallback to internal endpoint for Docker network
+    const endpoint = process.env.MINIO_EXTERNAL_ENDPOINT || process.env.MINIO_ENDPOINT || 'localhost'
+    return `http://${endpoint}:9000/${BUCKET_NAME}/${filename}`
   } catch (error) {
     console.error('Error uploading photo:', error)
     throw error
