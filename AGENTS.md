@@ -5,7 +5,11 @@
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint (no custom config, uses Next.js defaults)
-- No test framework configured - add Jest/Vitest if needed
+- `npm test` - Run unit tests with Vitest (watch mode)
+- `npm run test:run` - Run unit tests once
+- `npm run test:ui` - Run unit tests with UI
+- `npm run test:e2e` - Run e2e tests with Playwright
+- `npm run test:e2e:ui` - Run e2e tests with Playwright UI
 
 ## Data Migration
 - `node scripts/migrate-data.js` - Migrate mock events to MinIO (run once after setup)
