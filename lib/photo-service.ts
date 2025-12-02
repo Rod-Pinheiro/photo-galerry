@@ -112,14 +112,17 @@ export async function getAllEvents(forceRefresh = false): Promise<Event[]> {
     })
 
     // Convert to our Event interface format
-    const events: Event[] = eventsQuery.rows.map(dbEvent => ({
-      id: dbEvent.id,
-      name: dbEvent.name,
-      date: new Date(dbEvent.date),
-      thumbnail: dbEvent.thumbnail || '/placeholder.jpg',
-      photos: photosByEvent[dbEvent.id] || [],
-      visible: dbEvent.visible
-    }))
+    const events: Event[] = eventsQuery.rows.map(dbEvent => {
+      const eventPhotos = photosByEvent[dbEvent.id] || []
+      return {
+        id: dbEvent.id,
+        name: dbEvent.name,
+        date: new Date(dbEvent.date),
+        thumbnail: dbEvent.thumbnail && dbEvent.thumbnail !== '/placeholder.jpg' ? dbEvent.thumbnail : (eventPhotos.length > 0 ? eventPhotos[0].url : '/placeholder.jpg'),
+        photos: eventPhotos,
+        visible: dbEvent.visible
+      }
+    })
 
     // Only try to get MinIO folders if not in build time
     let folderEvents: Event[] = []
