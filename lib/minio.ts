@@ -57,7 +57,16 @@ export async function uploadPhoto(file: Buffer, filename: string, contentType: s
 }
 
 export async function getPhotoUrl(filename: string) {
-  return `http://${process.env.MINIO_ENDPOINT || 'localhost'}:9000/${BUCKET_NAME}/${filename}`
+  // Use public URL for browser access, with fallback logic
+  const publicUrl = process.env.MINIO_PUBLIC_URL
+  if (publicUrl) {
+    // Remove trailing slash and ensure it ends with the bucket path
+    const baseUrl = publicUrl.replace(/\/$/, '')
+    return `${baseUrl}/${BUCKET_NAME}/${filename}`
+  }
+
+  // Fallback to localhost for development
+  return `http://localhost:9000/${BUCKET_NAME}/${filename}`
 }
 
 export async function deletePhoto(filename: string) {
