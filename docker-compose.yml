@@ -3,13 +3,11 @@ version: '3.8'
 services:
   app:
     build: .
-    ports:
-      - "3000:3000"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://user:password@postgres:5432/photo_gallery
       - MINIO_ENDPOINT=minio
-       - MINIO_PUBLIC_URL=http://nginx
+      - MINIO_PUBLIC_URL=http://galeria.pinuslab.dev/s3
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_BUCKET=photos
@@ -72,10 +70,11 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "8080:80"
+      - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
+      - app
       - minio
     networks:
       - photo-gallery
