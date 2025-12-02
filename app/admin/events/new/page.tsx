@@ -59,21 +59,21 @@ export default function NewEventPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center space-x-4">
-        <Button variant="outline" size="icon" asChild>
-          <Link href="/admin/events">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-            Novo Evento
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">
-            Crie um novo evento na galeria
-          </p>
-        </div>
-      </div>
+       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+         <Button variant="outline" size="icon" asChild className="self-start">
+           <Link href="/admin/events">
+             <ArrowLeft className="h-4 w-4" />
+           </Link>
+         </Button>
+         <div className="flex-1">
+           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+             Novo Evento
+           </h1>
+           <p className="text-slate-600 dark:text-slate-400 mt-2">
+             Crie um novo evento na galeria
+           </p>
+         </div>
+       </div>
 
       <div className="max-w-2xl">
         <Card>
@@ -128,16 +128,16 @@ export default function NewEventPage() {
                 </ul>
               </div>
 
-              <div className="flex space-x-4">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <Plus className="mr-2 h-4 w-4" />
-                  Criar Evento
-                </Button>
-                <Button type="button" variant="outline" asChild>
-                  <Link href="/admin/events">Cancelar</Link>
-                </Button>
-              </div>
+               <div className="flex flex-col sm:flex-row gap-2">
+                 <Button type="submit" disabled={isSubmitting} className="sm:mr-2">
+                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                   <Plus className="mr-2 h-4 w-4" />
+                   Criar Evento
+                 </Button>
+                 <Button type="button" variant="outline" asChild>
+                   <Link href="/admin/events">Cancelar</Link>
+                 </Button>
+               </div>
             </form>
           </CardContent>
         </Card>

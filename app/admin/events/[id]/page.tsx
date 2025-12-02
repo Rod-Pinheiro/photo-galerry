@@ -123,21 +123,21 @@ export default function EditEventPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center space-x-4">
-        <Button variant="outline" size="icon" asChild>
-          <Link href="/admin/events">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-            Editar Evento
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">
-            {event.name} • {event.photos.length} foto{event.photos.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-      </div>
+       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+         <Button variant="outline" size="icon" asChild className="self-start">
+           <Link href="/admin/events">
+             <ArrowLeft className="h-4 w-4" />
+           </Link>
+         </Button>
+         <div className="flex-1">
+           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+             Editar Evento
+           </h1>
+           <p className="text-slate-600 dark:text-slate-400 mt-2">
+             {event.name} • {event.photos.length} foto{event.photos.length !== 1 ? 's' : ''}
+           </p>
+         </div>
+       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Form */}
@@ -182,16 +182,16 @@ export default function EditEventPage() {
                   <Label htmlFor="visible">Evento visível na galeria pública</Label>
                 </div>
 
-                <div className="flex space-x-4">
-                  <Button type="submit" disabled={saving}>
-                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    <Save className="mr-2 h-4 w-4" />
-                    Salvar Alterações
-                  </Button>
-                  <Button type="button" variant="outline" asChild>
-                    <Link href="/admin/events">Cancelar</Link>
-                  </Button>
-                </div>
+                 <div className="flex flex-col sm:flex-row gap-2">
+                   <Button type="submit" disabled={saving} className="sm:mr-2">
+                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                     <Save className="mr-2 h-4 w-4" />
+                     Salvar Alterações
+                   </Button>
+                   <Button type="button" variant="outline" asChild>
+                     <Link href="/admin/events">Cancelar</Link>
+                   </Button>
+                 </div>
               </form>
             </CardContent>
           </Card>
@@ -254,18 +254,18 @@ export default function EditEventPage() {
                   {event.photos.length} foto{event.photos.length !== 1 ? 's' : ''} no evento
                 </div>
 
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/event/${event.id}`}>
-                      Ver na Galeria
-                    </Link>
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Link href={`/admin/events/${event.id}/photos`}>
-                      Gerenciar Fotos
-                    </Link>
-                  </Button>
-                </div>
+                 <div className="flex flex-col sm:flex-row gap-2">
+                   <Button variant="outline" size="sm" asChild className="sm:mr-2">
+                     <Link href={`/event/${event.id}`}>
+                       Ver na Galeria
+                     </Link>
+                   </Button>
+                   <Button variant="outline" size="sm" asChild>
+                     <Link href={`/admin/events/${event.id}/photos`}>
+                       Gerenciar Fotos
+                     </Link>
+                   </Button>
+                 </div>
               </div>
             </CardContent>
           </Card>

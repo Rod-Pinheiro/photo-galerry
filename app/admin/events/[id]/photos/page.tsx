@@ -210,21 +210,21 @@ export default function EventPhotosPage() {
   if (loading) {
     return (
       <div className="space-y-8">
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" size="icon" asChild>
-            <Link href={`/admin/events/${eventId}`}>
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-              Carregando fotos...
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-2">
-              Evento: {eventId}
-            </p>
-          </div>
-        </div>
+         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+           <Button variant="outline" size="icon" asChild className="self-start">
+             <Link href={`/admin/events/${eventId}`}>
+               <ArrowLeft className="h-4 w-4" />
+             </Link>
+           </Button>
+           <div className="flex-1">
+             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+               Carregando fotos...
+             </h1>
+             <p className="text-slate-600 dark:text-slate-400 mt-2">
+               Evento: {eventId}
+             </p>
+           </div>
+         </div>
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
@@ -248,21 +248,21 @@ export default function EventPhotosPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center space-x-4">
-        <Button variant="outline" size="icon" asChild>
-          <Link href={`/admin/events/${eventId}`}>
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-            Fotos do Evento
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">
-            {event.name} • {event.photos.length} foto{event.photos.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-      </div>
+       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+         <Button variant="outline" size="icon" asChild className="self-start">
+           <Link href={`/admin/events/${eventId}`}>
+             <ArrowLeft className="h-4 w-4" />
+           </Link>
+         </Button>
+         <div className="flex-1">
+           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+             Fotos do Evento
+           </h1>
+           <p className="text-slate-600 dark:text-slate-400 mt-2">
+             {event.name} • {event.photos.length} foto{event.photos.length !== 1 ? 's' : ''}
+           </p>
+         </div>
+       </div>
 
       {/* Upload Section */}
       <Card>
@@ -273,46 +273,46 @@ export default function EventPhotosPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              dragActive
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-                : 'border-slate-300 dark:border-slate-600'
-            }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-          >
-            <Upload className="mx-auto h-12 w-12 text-slate-400 mb-4" />
-            <div className="space-y-2">
-              <p className="text-lg font-medium">
-                Arraste e solte suas fotos aqui
-              </p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                ou clique para selecionar arquivos
-              </p>
-              <p className="text-xs text-slate-400">
-                JPEG, PNG, WebP até 10MB cada
-              </p>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={(e) => handleFiles(e.target.files)}
-              className="hidden"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              className="mt-4"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              Selecionar Arquivos
-            </Button>
-          </div>
+           <div
+             className={`border-2 border-dashed rounded-lg p-6 sm:p-8 text-center transition-colors ${
+               dragActive
+                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                 : 'border-slate-300 dark:border-slate-600'
+             }`}
+             onDragEnter={handleDrag}
+             onDragLeave={handleDrag}
+             onDragOver={handleDrag}
+             onDrop={handleDrop}
+           >
+             <Upload className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-slate-400 mb-4" />
+             <div className="space-y-2">
+               <p className="text-base sm:text-lg font-medium">
+                 Arraste e solte suas fotos aqui
+               </p>
+               <p className="text-sm text-slate-500 dark:text-slate-400">
+                 ou clique para selecionar arquivos
+               </p>
+               <p className="text-xs text-slate-400">
+                 JPEG, PNG, WebP até 10MB cada
+               </p>
+             </div>
+             <input
+               ref={fileInputRef}
+               type="file"
+               multiple
+               accept="image/*"
+               onChange={(e) => handleFiles(e.target.files)}
+               className="hidden"
+             />
+             <Button
+               type="button"
+               variant="outline"
+               className="mt-4 w-full sm:w-auto"
+               onClick={() => fileInputRef.current?.click()}
+             >
+               Selecionar Arquivos
+             </Button>
+           </div>
 
           {/* Selected Files Preview */}
           {selectedFiles.length > 0 && (
@@ -325,74 +325,75 @@ export default function EventPhotosPage() {
                   Total: {(selectedFiles.reduce((sum, file) => sum + file.size, 0) / 1024 / 1024).toFixed(1)} MB
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {selectedFiles.map((file, index) => {
-                  const isValid = file.size <= 10 * 1024 * 1024
-                  const isValidType = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)
+               <div className="grid grid-cols-1 gap-3">
+                 {selectedFiles.map((file, index) => {
+                   const isValid = file.size <= 10 * 1024 * 1024
+                   const isValidType = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)
 
-                  return (
-                    <div key={index} className="relative group border rounded-lg p-3 bg-slate-50 dark:bg-slate-800">
-                      <div className="flex items-start gap-3">
-                        <div className="w-16 h-16 bg-slate-200 dark:bg-slate-700 rounded overflow-hidden shrink-0">
-                          <img
-                            src={URL.createObjectURL(file)}
-                            alt={file.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-900 dark:text-white truncate" title={file.name}>
-                            {file.name}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant={isValidType ? "default" : "destructive"} className="text-xs">
-                              {file.type.split('/')[1].toUpperCase()}
-                            </Badge>
-                            <span className="text-xs text-slate-500">
-                              {(file.size / 1024 / 1024).toFixed(1)} MB
-                            </span>
-                          </div>
-                          {!isValid && (
-                            <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                              Arquivo muito grande (máx. 10MB)
-                            </p>
-                          )}
-                          {!isValidType && (
-                            <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                              Tipo não suportado
-                            </p>
-                          )}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFile(index)}
-                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )
-                })}
+                   return (
+                     <div key={index} className="relative group border rounded-lg p-4 bg-slate-50 dark:bg-slate-800">
+                       <div className="flex items-start gap-3">
+                         <div className="w-16 h-16 bg-slate-200 dark:bg-slate-700 rounded overflow-hidden shrink-0">
+                           <img
+                             src={URL.createObjectURL(file)}
+                             alt={file.name}
+                             className="w-full h-full object-cover"
+                           />
+                         </div>
+                         <div className="flex-1 min-w-0">
+                           <p className="text-sm font-medium text-slate-900 dark:text-white truncate" title={file.name}>
+                             {file.name}
+                           </p>
+                           <div className="flex flex-wrap items-center gap-2 mt-1">
+                             <Badge variant={isValidType ? "default" : "destructive"} className="text-xs">
+                               {file.type.split('/')[1].toUpperCase()}
+                             </Badge>
+                             <span className="text-xs text-slate-500">
+                               {(file.size / 1024 / 1024).toFixed(1)} MB
+                             </span>
+                           </div>
+                           {!isValid && (
+                             <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                               Arquivo muito grande (máx. 10MB)
+                             </p>
+                           )}
+                           {!isValidType && (
+                             <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                               Tipo não suportado
+                             </p>
+                           )}
+                         </div>
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={() => removeFile(index)}
+                           className="h-8 w-8 p-0 shrink-0"
+                         >
+                           <X className="h-4 w-4" />
+                         </Button>
+                       </div>
+                     </div>
+                   )
+                 })}
               </div>
 
-              <div className="flex justify-between items-center mt-4">
-                <Button variant="outline" onClick={() => setSelectedFiles([])}>
-                  Limpar Todos
-                </Button>
-                <Button
-                  onClick={uploadFiles}
-                  disabled={uploading || selectedFiles.some(file =>
-                    file.size > 10 * 1024 * 1024 ||
-                    !['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)
-                  )}
-                >
-                  {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <Upload className="mr-2 h-4 w-4" />
-                  Fazer Upload ({selectedFiles.length} arquivo{selectedFiles.length !== 1 ? 's' : ''})
-                </Button>
-              </div>
+               <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                 <Button variant="outline" onClick={() => setSelectedFiles([])} className="sm:mr-auto">
+                   Limpar Todos
+                 </Button>
+                 <Button
+                   onClick={uploadFiles}
+                   disabled={uploading || selectedFiles.some(file =>
+                     file.size > 10 * 1024 * 1024 ||
+                     !['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)
+                   )}
+                   className="sm:ml-auto"
+                 >
+                   {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                   <Upload className="mr-2 h-4 w-4" />
+                   Fazer Upload ({selectedFiles.length} arquivo{selectedFiles.length !== 1 ? 's' : ''})
+                 </Button>
+               </div>
             </div>
           )}
         </CardContent>
@@ -467,7 +468,7 @@ export default function EventPhotosPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
               {event.photos.map((photo) => (
                 <div key={photo.id} className="relative group">
                   <div className="aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden">

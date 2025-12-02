@@ -87,20 +87,20 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">
-            Gerencie seus eventos e fotos
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/admin/events/new">
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Evento
-          </Link>
-        </Button>
-      </div>
+       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+         <div>
+           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
+           <p className="text-slate-600 dark:text-slate-400 mt-2">
+             Gerencie seus eventos e fotos
+           </p>
+         </div>
+         <Button asChild className="self-start sm:self-auto">
+           <Link href="/admin/events/new">
+             <Plus className="h-4 w-4 mr-2" />
+             Novo Evento
+           </Link>
+         </Button>
+       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -161,63 +161,65 @@ export default function AdminDashboard() {
             </div>
           ) : (
             <div className="space-y-4">
-              {events.map((event) => (
-                <div
-                  key={event.id}
-                  className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-800 rounded-lg"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-lg overflow-hidden">
-                      <img
-                        src={event.thumbnail}
-                        alt={event.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = '/placeholder.svg'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-slate-900 dark:text-white">
-                        {event.name}
-                      </h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {formatDate(new Date(event.date))} • {event.photos.length} foto{event.photos.length !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                  </div>
+               {events.map((event) => (
+                 <div
+                   key={event.id}
+                   className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border border-slate-200 dark:border-slate-800 rounded-lg"
+                 >
+                   <div className="flex items-center space-x-4">
+                     <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-lg overflow-hidden flex-shrink-0">
+                       <img
+                         src={event.thumbnail}
+                         alt={event.name}
+                         className="w-full h-full object-cover"
+                         onError={(e) => {
+                           e.currentTarget.src = '/placeholder.svg'
+                         }}
+                       />
+                     </div>
+                     <div className="min-w-0 flex-1">
+                       <h3 className="font-medium text-slate-900 dark:text-white truncate">
+                         {event.name}
+                       </h3>
+                       <p className="text-sm text-slate-500 dark:text-slate-400">
+                         {formatDate(new Date(event.date))} • {event.photos.length} foto{event.photos.length !== 1 ? 's' : ''}
+                       </p>
+                     </div>
+                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Badge variant={event.visible ? "default" : "secondary"}>
-                      {event.visible ? (
-                        <>
-                          <Eye className="w-3 h-3 mr-1" />
-                          Visível
-                        </>
-                      ) : (
-                        <>
-                          <EyeOff className="w-3 h-3 mr-1" />
-                          Oculto
-                        </>
-                      )}
-                    </Badge>
+                   <div className="flex items-center justify-between sm:justify-end space-x-2">
+                     <Badge variant={event.visible ? "default" : "secondary"} className="sm:mr-2">
+                       {event.visible ? (
+                         <>
+                           <Eye className="w-3 h-3 mr-1" />
+                           Visível
+                         </>
+                       ) : (
+                         <>
+                           <EyeOff className="w-3 h-3 mr-1" />
+                           Oculto
+                         </>
+                       )}
+                     </Badge>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleVisibility(event.id, event.visible)}
-                    >
-                      {event.visible ? 'Ocultar' : 'Mostrar'}
-                    </Button>
+                     <div className="flex space-x-2">
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         onClick={() => toggleVisibility(event.id, event.visible)}
+                       >
+                         {event.visible ? 'Ocultar' : 'Mostrar'}
+                       </Button>
 
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/admin/events/${event.id}`}>
-                        Editar
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                       <Button variant="outline" size="sm" asChild>
+                         <Link href={`/admin/events/${event.id}`}>
+                           Editar
+                         </Link>
+                       </Button>
+                     </div>
+                   </div>
+                 </div>
+               ))}
             </div>
           )}
         </CardContent>
