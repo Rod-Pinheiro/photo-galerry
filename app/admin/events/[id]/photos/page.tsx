@@ -273,46 +273,46 @@ export default function EventPhotosPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-           <div
-             className={`border-2 border-dashed rounded-lg p-6 sm:p-8 text-center transition-colors ${
-               dragActive
-                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-                 : 'border-slate-300 dark:border-slate-600'
-             }`}
-             onDragEnter={handleDrag}
-             onDragLeave={handleDrag}
-             onDragOver={handleDrag}
-             onDrop={handleDrop}
-           >
-             <Upload className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-slate-400 mb-4" />
-             <div className="space-y-2">
-               <p className="text-base sm:text-lg font-medium">
-                 Arraste e solte suas fotos aqui
-               </p>
-               <p className="text-sm text-slate-500 dark:text-slate-400">
-                 ou clique para selecionar arquivos
-               </p>
-               <p className="text-xs text-slate-400">
-                 JPEG, PNG, WebP até 10MB cada
-               </p>
-             </div>
-             <input
-               ref={fileInputRef}
-               type="file"
-               multiple
-               accept="image/*"
-               onChange={(e) => handleFiles(e.target.files)}
-               className="hidden"
-             />
-             <Button
-               type="button"
-               variant="outline"
-               className="mt-4 w-full sm:w-auto"
-               onClick={() => fileInputRef.current?.click()}
-             >
-               Selecionar Arquivos
-             </Button>
-           </div>
+            <div
+              className={`border-2 border-dashed rounded-lg p-4 sm:p-6 lg:p-8 text-center transition-colors ${
+                dragActive
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                  : 'border-slate-300 dark:border-slate-600'
+              }`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              <Upload className="mx-auto h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-slate-400 mb-3 sm:mb-4" />
+              <div className="space-y-1 sm:space-y-2">
+                <p className="text-sm sm:text-base lg:text-lg font-medium">
+                  Arraste e solte suas fotos aqui
+                </p>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                  ou clique para selecionar arquivos
+                </p>
+                <p className="text-xs text-slate-400">
+                  JPEG, PNG, WebP até 10MB cada
+                </p>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => handleFiles(e.target.files)}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-3 sm:mt-4 w-full sm:w-auto text-sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Selecionar Arquivos
+              </Button>
+            </div>
 
           {/* Selected Files Preview */}
           {selectedFiles.length > 0 && (
@@ -331,69 +331,74 @@ export default function EventPhotosPage() {
                    const isValidType = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)
 
                    return (
-                     <div key={index} className="relative group border rounded-lg p-4 bg-slate-50 dark:bg-slate-800">
-                       <div className="flex items-start gap-3">
-                         <div className="w-16 h-16 bg-slate-200 dark:bg-slate-700 rounded overflow-hidden shrink-0">
-                           <img
-                             src={URL.createObjectURL(file)}
-                             alt={file.name}
-                             className="w-full h-full object-cover"
-                           />
-                         </div>
-                         <div className="flex-1 min-w-0">
-                           <p className="text-sm font-medium text-slate-900 dark:text-white truncate" title={file.name}>
-                             {file.name}
-                           </p>
-                           <div className="flex flex-wrap items-center gap-2 mt-1">
-                             <Badge variant={isValidType ? "default" : "destructive"} className="text-xs">
-                               {file.type.split('/')[1].toUpperCase()}
-                             </Badge>
-                             <span className="text-xs text-slate-500">
-                               {(file.size / 1024 / 1024).toFixed(1)} MB
-                             </span>
-                           </div>
-                           {!isValid && (
-                             <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                               Arquivo muito grande (máx. 10MB)
-                             </p>
-                           )}
-                           {!isValidType && (
-                             <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                               Tipo não suportado
-                             </p>
-                           )}
-                         </div>
-                         <Button
-                           variant="ghost"
-                           size="sm"
-                           onClick={() => removeFile(index)}
-                           className="h-8 w-8 p-0 shrink-0"
-                         >
-                           <X className="h-4 w-4" />
-                         </Button>
-                       </div>
-                     </div>
+                      <div key={index} className="relative group border rounded-lg p-3 sm:p-4 bg-slate-50 dark:bg-slate-800">
+                        <div className="flex items-start gap-2 sm:gap-3">
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-200 dark:bg-slate-700 rounded overflow-hidden shrink-0">
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={file.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate" title={file.name}>
+                              {file.name}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
+                              <Badge variant={isValidType ? "default" : "destructive"} className="text-xs px-1 py-0">
+                                {file.type.split('/')[1].toUpperCase()}
+                              </Badge>
+                              <span className="text-xs text-slate-500">
+                                {(file.size / 1024 / 1024).toFixed(1)} MB
+                              </span>
+                            </div>
+                            {(!isValid || !isValidType) && (
+                              <div className="mt-1">
+                                {!isValid && (
+                                  <p className="text-xs text-red-600 dark:text-red-400">
+                                    Arquivo muito grande (máx. 10MB)
+                                  </p>
+                                )}
+                                {!isValidType && (
+                                  <p className="text-xs text-red-600 dark:text-red-400">
+                                    Tipo não suportado
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFile(index)}
+                            className="h-6 w-6 sm:h-8 sm:w-8 p-0 shrink-0 opacity-60 hover:opacity-100"
+                          >
+                            <X className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        </div>
+                      </div>
                    )
                  })}
               </div>
 
-               <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                 <Button variant="outline" onClick={() => setSelectedFiles([])} className="sm:mr-auto">
-                   Limpar Todos
-                 </Button>
-                 <Button
-                   onClick={uploadFiles}
-                   disabled={uploading || selectedFiles.some(file =>
-                     file.size > 10 * 1024 * 1024 ||
-                     !['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)
-                   )}
-                   className="sm:ml-auto"
-                 >
-                   {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                   <Upload className="mr-2 h-4 w-4" />
-                   Fazer Upload ({selectedFiles.length} arquivo{selectedFiles.length !== 1 ? 's' : ''})
-                 </Button>
-               </div>
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4">
+                  <Button variant="outline" onClick={() => setSelectedFiles([])} className="w-full sm:w-auto sm:mr-auto text-sm">
+                    Limpar Todos
+                  </Button>
+                  <Button
+                    onClick={uploadFiles}
+                    disabled={uploading || selectedFiles.some(file =>
+                      file.size > 10 * 1024 * 1024 ||
+                      !['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)
+                    )}
+                    className="w-full sm:w-auto sm:ml-auto text-sm"
+                  >
+                    {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Upload className="mr-2 h-4 w-4" />
+                    <span className="hidden xs:inline">Fazer Upload ({selectedFiles.length} arquivo{selectedFiles.length !== 1 ? 's' : ''})</span>
+                    <span className="xs:hidden">Upload ({selectedFiles.length})</span>
+                  </Button>
+                </div>
             </div>
           )}
         </CardContent>
@@ -403,50 +408,55 @@ export default function EventPhotosPage() {
       {event.photos.length > 0 && (
         <Card>
           <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                {selectedPhotos.size} de {event.photos.length} foto{event.photos.length !== 1 ? "s" : ""} selecionada{selectedPhotos.size !== 1 ? "s" : ""}
-              </div>
+             <div className="flex flex-col gap-4">
+               <div className="text-sm font-medium text-slate-700 dark:text-slate-300 text-center sm:text-left">
+                 {selectedPhotos.size} de {event.photos.length} foto{event.photos.length !== 1 ? "s" : ""} selecionada{selectedPhotos.size !== 1 ? "s" : ""}
+               </div>
 
-              <div className="flex gap-3">
-                <Button
-                  onClick={selectAllPhotos}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  disabled={selectedPhotos.size === event.photos.length}
-                >
-                  <Check className="w-4 h-4" />
-                  Selecionar Todas
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2 sm:gap-3">
+                    <Button
+                      onClick={selectAllPhotos}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-2"
+                      disabled={selectedPhotos.size === event.photos.length}
+                    >
+                      <Check className="w-4 h-4" />
+                      <span className="hidden xs:inline">Selecionar Todas</span>
+                      <span className="xs:hidden">Todas</span>
+                    </Button>
 
-                <Button
-                  onClick={clearPhotoSelection}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  disabled={selectedPhotos.size === 0}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Limpar Seleção
-                </Button>
+                    <Button
+                      onClick={clearPhotoSelection}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-2"
+                      disabled={selectedPhotos.size === 0}
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      <span className="hidden xs:inline">Limpar Seleção</span>
+                      <span className="xs:hidden">Limpar</span>
+                    </Button>
+                  </div>
 
-                <Button
-                  onClick={bulkDeletePhotos}
-                  variant="destructive"
-                  size="sm"
-                  className="gap-2"
-                  disabled={selectedPhotos.size === 0 || bulkDeleting}
-                >
-                  {bulkDeleting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-4 h-4" />
-                  )}
-                  Excluir Selecionadas ({selectedPhotos.size})
-                </Button>
-              </div>
-            </div>
+                  <Button
+                    onClick={bulkDeletePhotos}
+                    variant="destructive"
+                    size="sm"
+                    className="w-full gap-2"
+                    disabled={selectedPhotos.size === 0 || bulkDeleting}
+                  >
+                    {bulkDeleting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                    <span className="hidden sm:inline">Excluir Selecionadas ({selectedPhotos.size})</span>
+                    <span className="sm:hidden">Excluir ({selectedPhotos.size})</span>
+                  </Button>
+                </div>
+             </div>
           </CardContent>
         </Card>
       )}
@@ -468,52 +478,68 @@ export default function EventPhotosPage() {
               </p>
             </div>
           ) : (
-             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-              {event.photos.map((photo) => (
-                <div key={photo.id} className="relative group">
-                  <div className="aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden">
-                    <img
-                      src={photo.url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = '/placeholder.svg'
-                      }}
-                    />
-                  </div>
+              <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3">
+               {event.photos.map((photo) => (
+                 <div key={photo.id} className="relative group">
+                   {/* Mobile: Click anywhere on image to toggle selection */}
+                   <div
+                     className="md:hidden aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden shadow-sm cursor-pointer"
+                     onClick={() => togglePhotoSelection(photo.id)}
+                   >
+                     <img
+                       src={photo.url}
+                       alt=""
+                       className="w-full h-full object-cover transition-transform duration-200"
+                       onError={(e) => {
+                         e.currentTarget.src = '/placeholder.svg'
+                       }}
+                     />
+                     {/* Selection Checkbox - Mobile Only */}
+                     <div className="absolute top-2 left-2">
+                       <Checkbox
+                         checked={selectedPhotos.has(photo.id)}
+                         onCheckedChange={(e) => {
+                           e.preventDefault()
+                           e.stopPropagation()
+                           togglePhotoSelection(photo.id)
+                         }}
+                         className="bg-white/90 dark:bg-slate-800/90 border-slate-300 dark:border-slate-600 w-5 h-5 pointer-events-none"
+                       />
+                     </div>
 
-                  {/* Selection Checkbox */}
-                  {/* <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Checkbox
-                      checked={selectedPhotos.has(photo.id)}
-                      onCheckedChange={() => togglePhotoSelection(photo.id)}
-                      className="bg-white/80 dark:bg-slate-700/80 border-slate-300 dark:border-slate-600"
-                    />
-                  </div> */}
+                   </div>
 
-                  {/* Delete Button */}
-                  <div className="absolute inset-0 transition-all duration-200 rounded-lg flex items-center justify-center">
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => deletePhoto(photo.id)}
-                      disabled={deletingPhoto === photo.id}
-                    >
-                      {deletingPhoto === photo.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
+                   {/* Desktop: Hover to show delete button */}
+                   <div className="hidden md:block aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden shadow-sm">
+                     <img
+                       src={photo.url}
+                       alt=""
+                       className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                       onError={(e) => {
+                         e.currentTarget.src = '/placeholder.svg'
+                       }}
+                     />
+                   </div>
 
-                  {/* Selection Indicator */}
-                  {selectedPhotos.has(photo.id) && (
-                    <div className="absolute inset-0 ring-2 ring-blue-600 rounded-lg pointer-events-none" />
-                  )}
-                </div>
-              ))}
+                   {/* Delete Button - Desktop Only */}
+                   <div className="hidden md:block absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 rounded-lg flex items-center justify-center">
+                       <Button
+                         variant="destructive"
+                         size="sm"
+                         className="opacity-0 group-hover:opacity-100 transition-opacity gap-2"
+                         onClick={() => deletePhoto(photo.id)}
+                         disabled={deletingPhoto === photo.id}
+                       >
+                         {deletingPhoto === photo.id ? (
+                           <Loader2 className="h-4 w-4 animate-spin" />
+                         ) : (
+                           <Trash2 className="h-4 w-4" />
+                         )}
+                         <span className="text-xs">Excluir</span>
+                       </Button>
+                    </div>
+                 </div>
+               ))}
             </div>
           )}
         </CardContent>
