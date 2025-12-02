@@ -6,17 +6,9 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
-    console.log('MinIO API called, awaiting params...')
     const resolvedParams = await params
-    console.log('Resolved params:', resolvedParams)
-    console.log('Type of resolvedParams:', typeof resolvedParams)
-    console.log('resolvedParams.path:', resolvedParams?.path)
-    if (!resolvedParams || !resolvedParams.path) {
-      console.log('Params or path is undefined')
-      return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
-    }
-
-    if (resolvedParams.path.length === 0) {
+    console.log('MinIO API called with params:', resolvedParams)
+    if (!resolvedParams.path || resolvedParams.path.length === 0) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
     }
 

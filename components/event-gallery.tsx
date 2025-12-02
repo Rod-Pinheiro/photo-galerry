@@ -7,20 +7,7 @@ import { SelectionControls } from "./selection-controls"
 import { DownloadSection } from "./download-section"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
-
-interface Photo {
-  id: string
-  url: string
-}
-
-interface Event {
-  id: string
-  name: string
-  date: string
-  thumbnail: string
-  photos: Photo[]
-  visible: boolean
-}
+import type { Photo, Event } from "@/lib/photo-service"
 
 export function EventGallery({ event }: { event: Event }) {
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
@@ -84,10 +71,10 @@ export function EventGallery({ event }: { event: Event }) {
             Voltar aos eventos
           </Link>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{event.name}</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
-            {formatDate(new Date(event.date))} • {photos.length} foto{photos.length !== 1 ? "s" : ""}
-            {loading && <Loader2 className="w-4 h-4 inline ml-2 animate-spin" />}
-          </p>
+           <p className="text-slate-600 dark:text-slate-400 mt-1">
+             {formatDate(event.date)} • {photos.length} foto{photos.length !== 1 ? "s" : ""}
+             {loading && <Loader2 className="w-4 h-4 inline ml-2 animate-spin" />}
+           </p>
         </div>
       </div>
 
@@ -102,7 +89,7 @@ export function EventGallery({ event }: { event: Event }) {
 
         <PhotoGrid photos={photos} selectedPhotos={selectedPhotos} onTogglePhoto={togglePhoto} />
 
-        {selectedPhotos.size > 0 && <DownloadSection event={{...event, date: new Date(event.date)}} selectedPhotoIds={Array.from(selectedPhotos)} />}
+        {selectedPhotos.size > 0 && <DownloadSection event={event} selectedPhotoIds={Array.from(selectedPhotos)} />}
       </div>
     </main>
   )

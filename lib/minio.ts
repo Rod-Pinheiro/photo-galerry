@@ -67,15 +67,15 @@ export async function getPhotoUrl(filename: string) {
     return `/api/minio/${BUCKET_NAME}/${filename}`
   }
 
-  // For development, try MINIO_PUBLIC_URL first, then localhost
+  // For development, try MINIO_PUBLIC_URL first, then API route
   const publicUrl = process.env.MINIO_PUBLIC_URL
   if (publicUrl) {
     const baseUrl = publicUrl.replace(/\/$/, '')
     return `${baseUrl}/${BUCKET_NAME}/${filename}`
   }
 
-  // Fallback to localhost for development
-  return `http://localhost/s3/${filename}`
+  // Fallback to API route for development
+  return `/api/minio/${BUCKET_NAME}/${filename}`
 }
 
 export async function deletePhoto(filename: string) {

@@ -185,24 +185,33 @@ export async function getEventById(id: string): Promise<Event | undefined> {
     `, [id])
 
     if (eventQuery.rows.length === 0) {
+      // Try to get event from MinIO metadata as fallback
+      try {
+        const { loadEventMetadata } = await import('./minio')
+        const events = await loadEventMetadata()
+        const event = events.find((e: any) => e.id === id)
+        if (event) {
+          // Get photos from MinIO
+          const photos = await getEventPhotos(id)
+          return {
+            id: event.id,
+            name: event.name,
+            date: new Date(event.date),
+            thumbnail: event.thumbnail || '/placeholder.jpg',
+            photos,
+            visible: event.visible !== false
+          }
+        }
+      } catch (minioError) {
+        console.log('Event not found in MinIO metadata either')
+      }
       return undefined
     }
 
     const dbEvent = eventQuery.rows[0]
 
-    // Get photos
-    const photosQuery = await db.query(`
-      SELECT id, filename, url
-      FROM photos
-      WHERE event_id = $1
-      ORDER BY created_at ASC
-    `, [id])
-
-    const photos = photosQuery.rows.map((photo: any) => ({
-      id: photo.id,
-      filename: photo.filename,
-      url: photo.url
-    }))
+    // Get photos (now includes fallback to MinIO)
+    const photos = await getEventPhotos(id)
 
     return {
       id: dbEvent.id,
@@ -289,11 +298,35 @@ export async function getEventPhotos(eventId: string, limit?: number): Promise<P
       ? await db.query(query, [eventId, limit])
       : await db.query(query, [eventId])
 
-    return result.rows.map((photo: any) => ({
+    const dbPhotos = result.rows.map((photo: any) => ({
       id: photo.id,
       filename: photo.filename,
       url: photo.url
     }))
+
+    // If we have photos in DB, return them
+    if (dbPhotos.length > 0) {
+      return dbPhotos
+    }
+
+    // Fallback: try to get photos from MinIO
+    try {
+      const { listPhotos, getPhotoUrl } = await import('./minio')
+      const { photos: filenames } = await listPhotos(`${eventId}/`, limit)
+
+      const minioPhotos = await Promise.all(
+        filenames.map(async (filename, index) => ({
+          id: `minio-${eventId}-${index}`,
+          filename,
+          url: await getPhotoUrl(filename)
+        }))
+      )
+
+      return minioPhotos
+    } catch (minioError) {
+      console.log('MinIO not available for event:', eventId)
+      return []
+    }
   } catch (error) {
     console.error('Error loading photos for event:', eventId, error)
     return []
