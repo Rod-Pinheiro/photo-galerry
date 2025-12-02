@@ -14,10 +14,10 @@ export function PhotoModal({ photo, onClose }: PhotoModalProps) {
       <div className="fixed inset-0 bg-black/75 z-50 transition-opacity" onClick={onClose} />
 
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="relative max-w-4xl max-h-[90vh] w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="relative max-w-4xl max-h-[90vh] w-full bg-white dark:bg-slate-900 rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={onClose}
-            className="absolute -top-10 right-0 p-2 text-white hover:bg-white/20 rounded-full transition-colors"
+            className="absolute top-4 right-4 z-10 p-2 text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -25,7 +25,7 @@ export function PhotoModal({ photo, onClose }: PhotoModalProps) {
           <img
             src={photo.url || "/placeholder.svg"}
             alt={`Foto ampliada`}
-            className="w-full h-full object-contain rounded-lg"
+            className="w-full h-full object-contain"
           />
         </div>
       </div>
