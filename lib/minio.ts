@@ -75,7 +75,7 @@ export async function getPhotoUrl(filename: string) {
   }
 
   // Fallback to localhost for development
-  return `http://localhost/s3/${BUCKET_NAME}/${filename}`
+  return `http://localhost/s3/${filename}`
 }
 
 export async function deletePhoto(filename: string) {

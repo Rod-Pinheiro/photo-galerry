@@ -43,6 +43,7 @@ export default function EventPhotosPage() {
         throw new Error('Event not found')
       }
 
+      console.log('Event photos structure:', foundEvent.photos?.[0])
       setEvent(foundEvent)
     } catch (err) {
       console.error('Error fetching event:', err)
@@ -120,11 +121,16 @@ export default function EventPhotosPage() {
 
     try {
       setDeletingPhoto(photoId)
+      console.log('Deleting photo:', photoId, 'from event:', eventId)
       const response = await fetch(`/api/admin/events/${eventId}/photos/${photoId}`, {
         method: 'DELETE',
       })
 
+      console.log('Delete response status:', response.status)
+      
       if (response.ok) {
+        const result = await response.json()
+        console.log('Delete response:', result)
         await fetchEvent() // Refresh event data
         setSelectedPhotos(prev => {
           const newSet = new Set(prev)
@@ -132,11 +138,13 @@ export default function EventPhotosPage() {
           return newSet
         })
       } else {
-        alert('Erro ao excluir foto')
+        const errorData = await response.json()
+        console.error('Delete error response:', errorData)
+        alert(`Erro ao excluir foto: ${errorData.error || 'Status ' + response.status}`)
       }
     } catch (err) {
       console.error('Error deleting photo:', err)
-      alert('Erro ao excluir foto')
+      alert(`Erro ao excluir foto: ${err instanceof Error ? err.message : 'Erro desconhecido'}`)
     } finally {
       setDeletingPhoto(null)
     }
@@ -325,7 +333,7 @@ export default function EventPhotosPage() {
                   return (
                     <div key={index} className="relative group border rounded-lg p-3 bg-slate-50 dark:bg-slate-800">
                       <div className="flex items-start gap-3">
-                        <div className="w-16 h-16 bg-slate-200 dark:bg-slate-700 rounded overflow-hidden flex-shrink-0">
+                        <div className="w-16 h-16 bg-slate-200 dark:bg-slate-700 rounded overflow-hidden shrink-0">
                           <img
                             src={URL.createObjectURL(file)}
                             alt={file.name}

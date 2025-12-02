@@ -4,6 +4,7 @@ import { db } from './db'
 
 export interface Photo {
   id: string
+  filename: string
   url: string
 }
 
@@ -94,7 +95,7 @@ export async function getAllEvents(forceRefresh = false): Promise<Event[]> {
 
     // Get all photos
     const photosQuery = await db.query(`
-      SELECT id, url, event_id, created_at
+      SELECT id, filename, url, event_id, created_at
       FROM photos
       ORDER BY created_at ASC
     `)
@@ -107,6 +108,7 @@ export async function getAllEvents(forceRefresh = false): Promise<Event[]> {
       }
       photosByEvent[photo.event_id].push({
         id: photo.id,
+        filename: photo.filename,
         url: photo.url
       })
     })
@@ -190,7 +192,7 @@ export async function getEventById(id: string): Promise<Event | undefined> {
 
     // Get photos
     const photosQuery = await db.query(`
-      SELECT id, url
+      SELECT id, filename, url
       FROM photos
       WHERE event_id = $1
       ORDER BY created_at ASC
@@ -198,6 +200,7 @@ export async function getEventById(id: string): Promise<Event | undefined> {
 
     const photos = photosQuery.rows.map((photo: any) => ({
       id: photo.id,
+      filename: photo.filename,
       url: photo.url
     }))
 
@@ -251,6 +254,7 @@ export async function createEvent(name: string, date: Date, thumbnail?: File): P
 // API functions for photo management
 export async function uploadEventPhoto(eventId: string, file: File): Promise<Photo> {
   const filename = `${eventId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+  const photoId = `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   const buffer = await file.arrayBuffer()
 
   const url = await uploadPhoto(Buffer.from(buffer), filename, file.type)
@@ -259,8 +263,8 @@ export async function uploadEventPhoto(eventId: string, file: File): Promise<Pho
   const result = await db.query(`
     INSERT INTO photos (id, filename, url, event_id)
     VALUES ($1, $2, $3, $4)
-    RETURNING id, url
-  `, [filename, filename, url, eventId])
+    RETURNING id, filename, url
+  `, [photoId, filename, url, eventId])
 
   const photo = result.rows[0]
 
@@ -269,6 +273,7 @@ export async function uploadEventPhoto(eventId: string, file: File): Promise<Pho
 
   return {
     id: photo.id,
+    filename: photo.filename,
     url: photo.url,
   }
 }
@@ -277,8 +282,8 @@ export async function getEventPhotos(eventId: string, limit?: number): Promise<P
   try {
     // Get photos from database
     const query = limit
-      ? `SELECT id, url FROM photos WHERE event_id = $1 ORDER BY created_at ASC LIMIT $2`
-      : `SELECT id, url FROM photos WHERE event_id = $1 ORDER BY created_at ASC`
+      ? `SELECT id, filename, url FROM photos WHERE event_id = $1 ORDER BY created_at ASC LIMIT $2`
+      : `SELECT id, filename, url FROM photos WHERE event_id = $1 ORDER BY created_at ASC`
 
     const result = limit
       ? await db.query(query, [eventId, limit])
@@ -286,6 +291,7 @@ export async function getEventPhotos(eventId: string, limit?: number): Promise<P
 
     return result.rows.map((photo: any) => ({
       id: photo.id,
+      filename: photo.filename,
       url: photo.url
     }))
   } catch (error) {
@@ -296,15 +302,31 @@ export async function getEventPhotos(eventId: string, limit?: number): Promise<P
 
 export async function deleteEventPhoto(eventId: string, photoId: string): Promise<void> {
   try {
-    // Delete from database
-    await db.query(`DELETE FROM photos WHERE id = $1`, [photoId])
+    console.log('deleteEventPhoto: Starting deletion for photoId:', photoId, 'eventId:', eventId)
+    
+    // First, get the photo info from database to get the filename
+    const photoQuery = await db.query(`SELECT filename FROM photos WHERE id = $1`, [photoId])
+    
+    if (photoQuery.rows.length === 0) {
+      console.log('Photo not found in database:', photoId)
+      throw new Error('Photo not found in database')
+    }
+    
+    const filename = photoQuery.rows[0].filename
+    console.log('Found filename:', filename)
 
-    // Delete from MinIO
+    // Delete from database
+    const deleteResult = await db.query(`DELETE FROM photos WHERE id = $1`, [photoId])
+    console.log('Deleted from database, rows affected:', deleteResult.rowCount)
+
+    // Delete from MinIO using the filename
     const { deletePhoto } = await import('./minio')
-    await deletePhoto(photoId)
+    await deletePhoto(filename)
+    console.log('Deleted from MinIO')
 
     // Invalidate cache
     eventsCache = null
+    console.log('Cache invalidated')
   } catch (error) {
     console.error('Error deleting photo:', photoId, error)
     throw error
