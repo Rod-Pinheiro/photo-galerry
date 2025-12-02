@@ -78,9 +78,9 @@ let eventsCache: Event[] | null = null
 let cacheTimestamp: number = 0
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
-export async function getAllEvents(): Promise<Event[]> {
+export async function getAllEvents(forceRefresh = false): Promise<Event[]> {
   // Check cache first
-  if (eventsCache && (Date.now() - cacheTimestamp) < CACHE_DURATION) {
+  if (!forceRefresh && eventsCache && (Date.now() - cacheTimestamp) < CACHE_DURATION) {
     return eventsCache
   }
 
@@ -115,7 +115,7 @@ export async function getAllEvents(): Promise<Event[]> {
     const events: Event[] = eventsQuery.rows.map(dbEvent => ({
       id: dbEvent.id,
       name: dbEvent.name,
-      date: dbEvent.date,
+      date: new Date(dbEvent.date),
       thumbnail: dbEvent.thumbnail || '/placeholder.jpg',
       photos: photosByEvent[dbEvent.id] || [],
       visible: dbEvent.visible
@@ -171,8 +171,45 @@ export async function getAllEvents(): Promise<Event[]> {
 }
 
 export async function getEventById(id: string): Promise<Event | undefined> {
-  const events = await getAllEvents()
-  return events.find((event) => event.id === id)
+  try {
+    // Query database directly to avoid cache issues
+    const eventQuery = await db.query(`
+      SELECT id, name, date, thumbnail, visible
+      FROM events
+      WHERE id = $1
+    `, [id])
+
+    if (eventQuery.rows.length === 0) {
+      return undefined
+    }
+
+    const dbEvent = eventQuery.rows[0]
+
+    // Get photos
+    const photosQuery = await db.query(`
+      SELECT id, url
+      FROM photos
+      WHERE event_id = $1
+      ORDER BY created_at ASC
+    `, [id])
+
+    const photos = photosQuery.rows.map((photo: any) => ({
+      id: photo.id,
+      url: photo.url
+    }))
+
+    return {
+      id: dbEvent.id,
+      name: dbEvent.name,
+      date: new Date(dbEvent.date),
+      thumbnail: dbEvent.thumbnail || '/placeholder.jpg',
+      photos,
+      visible: dbEvent.visible
+    }
+  } catch (error) {
+    console.error('Error in getEventById:', error)
+    return undefined
+  }
 }
 
 export async function createEvent(name: string, date: Date, thumbnail?: File): Promise<Event> {
@@ -201,7 +238,7 @@ export async function createEvent(name: string, date: Date, thumbnail?: File): P
   return {
     id: newEvent.id,
     name: newEvent.name,
-    date: newEvent.date,
+    date: new Date(newEvent.date),
     thumbnail: newEvent.thumbnail || '/placeholder.jpg',
     photos: [],
     visible: newEvent.visible
