@@ -4,7 +4,7 @@ export const BUCKET_NAME = process.env.MINIO_BUCKET || 'photos'
 
 let minioClient: Client | null = null
 
-function getMinioClient(): Client {
+export function getMinioClient(): Client {
   if (!minioClient) {
     const endpoint = process.env.MINIO_ENDPOINT || 'localhost'
     console.log('Creating MinIO client with endpoint:', endpoint, 'port:', 9000)
@@ -40,16 +40,7 @@ export async function uploadPhoto(file: Buffer, filename: string, contentType: s
       'Content-Type': contentType,
     })
 
-    // Use public URL for browser access, with fallback logic
-    const publicUrl = process.env.MINIO_PUBLIC_URL
-    if (publicUrl) {
-      // Remove trailing slash and ensure it ends with the bucket path
-      const baseUrl = publicUrl.replace(/\/$/, '')
-      return `${baseUrl}/${BUCKET_NAME}/${filename}`
-    }
-
-    // Fallback to localhost for development
-    return `http://localhost:9000/${BUCKET_NAME}/${filename}`
+    return getPhotoUrl(filename)
   } catch (error) {
     console.error('Error uploading photo:', error)
     throw error
@@ -57,10 +48,28 @@ export async function uploadPhoto(file: Buffer, filename: string, contentType: s
 }
 
 export async function getPhotoUrl(filename: string) {
-  // Use public URL for browser access, with fallback logic
+  // For production environments, use the API route to serve images
+  // This avoids CORS issues and URL problems
+  if (process.env.NODE_ENV === 'production') {
+    // If deployed on Vercel or similar platforms
+    if (process.env.VERCEL_URL) {
+      return `/api/minio/${BUCKET_NAME}/${filename}`
+    }
+
+    // If MINIO_PUBLIC_URL is set, use it
+    const publicUrl = process.env.MINIO_PUBLIC_URL
+    if (publicUrl) {
+      const baseUrl = publicUrl.replace(/\/$/, '')
+      return `${baseUrl}/${BUCKET_NAME}/${filename}`
+    }
+
+    // Fallback: use API route (assumes the app serves the images)
+    return `/api/minio/${BUCKET_NAME}/${filename}`
+  }
+
+  // For development, try MINIO_PUBLIC_URL first, then localhost
   const publicUrl = process.env.MINIO_PUBLIC_URL
   if (publicUrl) {
-    // Remove trailing slash and ensure it ends with the bucket path
     const baseUrl = publicUrl.replace(/\/$/, '')
     return `${baseUrl}/${BUCKET_NAME}/${filename}`
   }
