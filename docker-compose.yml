@@ -9,7 +9,7 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://user:password@postgres:5432/photo_gallery
       - MINIO_ENDPOINT=minio
-      - MINIO_PUBLIC_URL=http://localhost:9000
+       - MINIO_PUBLIC_URL=http://nginx
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_BUCKET=photos
@@ -66,6 +66,17 @@ services:
       echo 'Bucket photos created and configured';
       exit 0;
       "
+    networks:
+      - photo-gallery
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - minio
     networks:
       - photo-gallery
 
