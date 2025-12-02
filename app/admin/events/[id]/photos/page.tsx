@@ -53,14 +53,36 @@ export default function EventPhotosPage() {
   }
 
   const handleFiles = (files: FileList | null) => {
-    if (!files) return
+    console.log('handleFiles called with:', files)
+    if (!files) {
+      console.log('No files provided')
+      return
+    }
+
+    console.log('Files received:', Array.from(files).map(f => ({ name: f.name, type: f.type, size: f.size })))
 
     const validFiles = Array.from(files).filter(file => {
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-      return allowedTypes.includes(file.type) && file.size <= 10 * 1024 * 1024 // 10MB
+      const isValidType = allowedTypes.includes(file.type)
+      const isValidSize = file.size <= 10 * 1024 * 1024 // 10MB
+
+      console.log(`File ${file.name}: type=${file.type} (${isValidType ? 'valid' : 'invalid'}), size=${file.size} (${isValidSize ? 'valid' : 'invalid'})`)
+
+      return isValidType && isValidSize
     })
 
-    setSelectedFiles(prev => [...prev, ...validFiles])
+    console.log('Valid files:', validFiles.length)
+
+    if (validFiles.length > 0) {
+      setSelectedFiles(prev => [...prev, ...validFiles])
+      console.log('Files added to selectedFiles state')
+    }
+
+    // Reset input value for mobile compatibility
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+      console.log('Input reset')
+    }
   }
 
   const handleDrag = (e: React.DragEvent) => {
@@ -301,8 +323,12 @@ export default function EventPhotosPage() {
                 type="file"
                 multiple
                 accept="image/*"
-                onChange={(e) => handleFiles(e.target.files)}
+                onChange={(e) => {
+                  console.log('onChange triggered')
+                  handleFiles(e.target.files)
+                }}
                 className="hidden"
+                capture="environment"
               />
               <Button
                 type="button"
