@@ -474,16 +474,16 @@ export default function EventPhotosPage() {
                   </div>
 
                   {/* Selection Checkbox */}
-                  <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Checkbox
                       checked={selectedPhotos.has(photo.id)}
                       onCheckedChange={() => togglePhotoSelection(photo.id)}
                       className="bg-white/80 dark:bg-slate-700/80 border-slate-300 dark:border-slate-600"
                     />
-                  </div>
+                  </div> */}
 
                   {/* Delete Button */}
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center">
+                  <div className="absolute inset-0 transition-all duration-200 rounded-lg flex items-center justify-center">
                     <Button
                       variant="destructive"
                       size="icon"
